@@ -1,0 +1,3313 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quản Lý Kho Vật Tư</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<style>
+:root{
+  --bg:#F3F5F8;
+  --surface:#FFFFFF;
+  --primary:#0F2942;
+  --primary-light:#1E3A5F;
+  --accent:#D97706;
+  --accent-light:#FEF3C7;
+  --success:#15803D;
+  --success-bg:#ECFDF5;
+  --danger:#DC2626;
+  --danger-bg:#FEF2F2;
+  --text:#1F2937;
+  --text-muted:#6B7280;
+  --text-faint:#9CA3AF;
+  --border:#E4E7EC;
+  --radius:10px;
+  --shadow:0 1px 2px rgba(15,41,66,.06), 0 1px 8px rgba(15,41,66,.05);
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Inter',system-ui,sans-serif;
+  font-size:14px;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{font-family:'Space Grotesk',sans-serif;margin:0;letter-spacing:-.01em;}
+.mono{font-family:'JetBrains Mono',monospace;}
+button{font-family:inherit;}
+.app{display:flex;min-height:100vh;}
+
+/* Sidebar */
+.sidebar{
+  width:248px;
+  background:linear-gradient(180deg,#0F2942 0%,#0A1D30 100%);
+  color:#EAF0F7;
+  display:flex;
+  flex-direction:column;
+  flex-shrink:0;
+  position:sticky;
+  top:0;
+  height:100vh;
+  border-right:1px solid rgba(255,255,255,.05);
+}
+.sidebar-brand{
+  padding:20px 18px 18px;
+  border-bottom:1px solid rgba(255,255,255,.07);
+  display:flex;align-items:center;gap:12px;
+}
+.brand-logo{
+  width:38px;height:38px;border-radius:10px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--accent) 0%,#B45309 100%);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 12px rgba(217,119,6,.3);
+}
+.brand-logo svg{width:20px;height:20px;stroke:#fff;}
+.sidebar-brand h1{font-size:15.5px;color:#fff;line-height:1.2;}
+.sidebar-brand p{margin:3px 0 0;font-size:10.5px;color:#7E96AE;letter-spacing:.02em;}
+.nav{flex:1;padding:14px 12px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.15) transparent;}
+.nav::-webkit-scrollbar{width:4px;}
+.nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:4px;}
+.nav-label{
+  font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  color:#5F7A94;padding:14px 10px 6px;user-select:none;
+}
+.nav-label:first-child{padding-top:2px;}
+.nav-item{
+  display:flex;align-items:center;gap:11px;
+  padding:9px 10px;margin-bottom:1px;
+  border-radius:8px;cursor:pointer;
+  color:#A9BCCE;font-size:13px;font-weight:500;
+  position:relative;
+  transition:background .13s, color .13s;
+  user-select:none;
+}
+.nav-item .nic{
+  width:19px;height:19px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+}
+.nav-item .nic svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;}
+.nav-item:hover{background:rgba(255,255,255,.06);color:#fff;}
+.nav-item.active{
+  background:linear-gradient(90deg,rgba(217,119,6,.18) 0%,rgba(217,119,6,.07) 100%);
+  color:#fff;font-weight:600;
+}
+.nav-item.active::before{
+  content:'';position:absolute;left:-12px;top:6px;bottom:6px;width:3px;
+  background:var(--accent);border-radius:0 3px 3px 0;
+}
+.nav-item.active .nic{color:var(--accent);}
+.sidebar-foot{
+  padding:12px;border-top:1px solid rgba(255,255,255,.07);
+}
+#user-badge .user-chip{
+  display:flex;align-items:center;gap:10px;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);
+  border-radius:10px;padding:9px 11px;margin-bottom:10px;
+}
+#user-badge .avatar{
+  width:32px;height:32px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg,#1E3A5F,#2D537F);
+  border:1px solid rgba(255,255,255,.15);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:13px;color:#fff;
+}
+#user-badge .uinfo{min-width:0;}
+#user-badge .uname{font-size:12.5px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#user-badge .urole{
+  display:inline-block;margin-top:2px;font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent);background:rgba(217,119,6,.14);border:1px solid rgba(217,119,6,.3);
+  padding:1px 6px;border-radius:99px;
+}
+.foot-actions{display:flex;flex-direction:column;gap:4px;}
+.sidebar-btn{
+  width:100%;display:flex;align-items:center;gap:9px;
+  background:transparent;color:#8FA6BC;
+  border:none;
+  padding:7px 9px;border-radius:7px;font-size:12px;font-weight:500;
+  cursor:pointer;text-align:left;
+  transition:background .13s, color .13s;
+}
+.sidebar-btn .bic{width:16px;height:16px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.sidebar-btn .bic svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;}
+.sidebar-btn:hover{background:rgba(255,255,255,.07);color:#fff;}
+.sidebar-btn.logout:hover{background:rgba(220,38,38,.14);color:#FCA5A5;}
+
+/* Main */
+.content{flex:1;min-width:0;display:flex;flex-direction:column;}
+.topbar{
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  padding:18px 28px;
+  display:flex;align-items:center;justify-content:space-between;
+  gap:16px;flex-wrap:wrap;
+  position:sticky;top:0;z-index:20;
+}
+.topbar h2{font-size:20px;color:var(--primary);}
+.topbar .sub{color:var(--text-muted);font-size:12.5px;margin-top:2px;}
+.view{padding:24px 28px 60px;}
+.view.hidden{display:none;}
+
+/* Buttons */
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:9px 16px;border-radius:8px;border:1px solid transparent;
+  font-size:13px;font-weight:600;cursor:pointer;
+  transition:filter .12s, background .12s;white-space:nowrap;
+}
+.btn:active{filter:brightness(.95);}
+.btn-primary{background:var(--primary);color:#fff;}
+.btn-primary:hover{background:var(--primary-light);}
+.btn-accent{background:var(--accent);color:#fff;}
+.btn-accent:hover{filter:brightness(1.05);}
+.btn-ghost{background:transparent;color:var(--primary);border-color:var(--border);}
+.btn-ghost:hover{background:#F1F4F8;}
+.btn-danger-ghost{background:transparent;color:var(--danger);border-color:#F3D4D4;}
+.btn-danger-ghost:hover{background:var(--danger-bg);}
+.btn-sm{padding:6px 11px;font-size:12px;border-radius:7px;}
+.btn:disabled{opacity:.5;cursor:not-allowed;}
+.icon-btn{
+  background:transparent;border:1px solid var(--border);border-radius:7px;
+  width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;
+  cursor:pointer;color:var(--text-muted);font-size:13px;
+}
+.icon-btn:hover{background:#F1F4F8;color:var(--primary);}
+.icon-btn.danger:hover{background:var(--danger-bg);color:var(--danger);border-color:#F3D4D4;}
+
+/* Cards / summary */
+.cards-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:20px;}
+.stat-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:16px 18px;flex:1;min-width:170px;box-shadow:var(--shadow);
+}
+.stat-card .lbl{font-size:11.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600;}
+.stat-card .val{font-family:'Space Grotesk',sans-serif;font-size:26px;color:var(--primary);margin-top:4px;font-weight:700;}
+.stat-card.warn .val{color:var(--danger);}
+.stat-card .val small{font-size:13px;color:var(--text-muted);font-weight:500;}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);}
+.card-head{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.card-body{padding:16px 18px;}
+
+/* Toolbar / filters */
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.toolbar input[type=text], .toolbar input[type=date], .toolbar select{
+  padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:#fff;color:var(--text);
+}
+.toolbar input[type=text]{min-width:200px;}
+
+/* Table */
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead th{
+  text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;
+  color:var(--text-muted);font-weight:700;padding:9px 12px;border-bottom:1px solid var(--border);
+  background:#FAFBFC;white-space:nowrap;
+}
+tbody td{padding:10px 12px;border-bottom:1px solid #EEF1F4;vertical-align:middle;}
+tbody tr:hover{background:#FAFBFD;}
+tbody tr:last-child td{border-bottom:none;}
+.tbl-wrap{overflow-x:auto;}
+.empty-row td{text-align:center;color:var(--text-faint);padding:36px 12px;}
+.right{text-align:right;}
+.center{text-align:center;}
+.nowrap{white-space:nowrap;}
+
+/* Badges / pills */
+.pill{
+  display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:99px;
+  font-size:11.5px;font-weight:600;white-space:nowrap;
+}
+.pill-blue{background:#EAF1FB;color:#1D4E89;}
+.pill-amber{background:var(--accent-light);color:#92400E;}
+.pill-green{background:var(--success-bg);color:var(--success);}
+.pill-red{background:var(--danger-bg);color:var(--danger);}
+.pill-gray{background:#F1F2F4;color:var(--text-muted);}
+.tag-code{
+  font-family:'JetBrains Mono',monospace;font-weight:600;font-size:12px;
+  letter-spacing:.03em;background:#F1F4F8;border:1px solid var(--border);
+  padding:2px 7px;border-radius:5px;color:var(--primary-light);
+}
+
+/* Forms */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.form-grid.c3{grid-template-columns:1fr 1fr 1fr;}
+.form-group{display:flex;flex-direction:column;gap:5px;}
+.form-group.full{grid-column:1/-1;}
+.form-group label{font-size:12.5px;font-weight:600;color:var(--text);}
+.form-group .hint{font-size:11px;color:var(--text-faint);font-weight:400;}
+.form-group input, .form-group select, .form-group textarea{
+  padding:9px 11px;border:1px solid var(--border);border-radius:8px;font-size:13.5px;
+  font-family:inherit;background:#fff;color:var(--text);width:100%;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus{
+  outline:2px solid #BFD4EA;outline-offset:0;border-color:var(--primary-light);
+}
+.form-group textarea{resize:vertical;min-height:56px;}
+.radio-group{display:flex;gap:8px;flex-wrap:wrap;}
+.radio-card{
+  flex:1;min-width:140px;border:1.5px solid var(--border);border-radius:9px;padding:10px 12px;cursor:pointer;
+  display:flex;flex-direction:column;gap:2px;
+}
+.radio-card b{font-size:13px;}
+.radio-card span{font-size:11.5px;color:var(--text-muted);}
+.radio-card.selected{border-color:var(--accent);background:var(--accent-light);}
+.radio-card.selected b{color:#92400E;}
+
+/* Item rows table in modal */
+.items-editor{width:100%;border-collapse:collapse;margin-top:6px;}
+.items-editor th{font-size:10.5px;text-transform:uppercase;color:var(--text-muted);padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);}
+.items-editor td{padding:6px 8px;border-bottom:1px solid #F0F2F5;}
+.items-editor select, .items-editor input{
+  padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12.5px;width:100%;
+}
+.items-editor input[type=number]{text-align:right;}
+.row-remove{background:transparent;border:none;color:var(--danger);cursor:pointer;font-size:15px;padding:4px;}
+.add-row-btn{margin-top:8px;}
+
+/* Modal */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(10,20,32,.5);display:flex;align-items:flex-start;justify-content:center;
+  padding:40px 16px;overflow-y:auto;z-index:100;backdrop-filter:blur(1px);
+}
+.modal-overlay.hidden{display:none;}
+.modal{
+  background:#fff;border-radius:14px;max-width:640px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.25);
+  animation:modalIn .15s ease-out;
+}
+.modal.wide{max-width:820px;}
+@keyframes modalIn{from{opacity:0;transform:translateY(6px) scale(.98);}to{opacity:1;transform:none;}}
+.modal-head{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.modal-head h3{font-size:17px;color:var(--primary);}
+.modal-close{background:transparent;border:none;font-size:20px;color:var(--text-faint);cursor:pointer;line-height:1;padding:4px;}
+.modal-close:hover{color:var(--text);}
+.modal-body{padding:20px 22px;max-height:70vh;overflow-y:auto;}
+.modal-foot{padding:16px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;margin-bottom:14px;font-size:13px;}
+.detail-grid .dt-lbl{color:var(--text-muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;}
+.detail-grid .dt-val{font-weight:600;margin-top:1px;}
+
+/* Toast */
+#toast-container{position:fixed;bottom:22px;right:22px;z-index:200;display:flex;flex-direction:column;gap:8px;}
+.toast{
+  background:var(--primary);color:#fff;padding:11px 16px;border-radius:9px;font-size:13px;font-weight:500;
+  box-shadow:0 8px 24px rgba(0,0,0,.2);display:flex;align-items:center;gap:8px;min-width:230px;
+  animation:toastIn .18s ease-out;
+}
+.toast.success{background:#166534;}
+.toast.error{background:#991B1B;}
+@keyframes toastIn{from{opacity:0;transform:translateX(20px);}to{opacity:1;transform:none;}}
+
+.empty-state{text-align:center;padding:50px 20px;color:var(--text-faint);}
+.empty-state .big{font-size:34px;margin-bottom:8px;}
+.empty-state p{margin:4px 0 14px;font-size:13px;}
+
+.section-title{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);font-weight:700;margin:0 0 10px;}
+
+.help-banner{
+  background:#EAF1FB;border:1px solid #CBDCF0;color:#1D4E89;border-radius:9px;padding:12px 14px;font-size:12.5px;
+  margin-bottom:16px;display:flex;gap:10px;align-items:flex-start;
+}
+.warn-banner{background:#FEF3C7;border:1px solid #FDE293;color:#7A5300;}
+
+@media (max-width:880px){
+  .sidebar{position:fixed;left:-260px;transition:left .2s;z-index:150;box-shadow:none;}
+  .sidebar.open{left:0;box-shadow:0 0 40px rgba(0,0,0,.4);}
+  .form-grid, .form-grid.c3{grid-template-columns:1fr;}
+  .view{padding:16px 14px 50px;}
+  .topbar{padding:14px 16px;}
+  #menu-toggle{display:inline-flex !important;}
+}
+#menu-toggle{display:none;}
+
+/* Login screen */
+.login-screen{
+  position:fixed;inset:0;z-index:300;
+  background:
+    radial-gradient(1200px 600px at 85% -10%, rgba(217,119,6,.14), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(30,58,95,.55), transparent 55%),
+    linear-gradient(160deg,#0F2942 0%,#0A1D30 100%);
+  display:flex;align-items:center;justify-content:center;padding:24px;
+}
+.login-screen.hidden{display:none;}
+.login-shell{
+  display:flex;max-width:860px;width:100%;
+  border-radius:20px;overflow:hidden;
+  box-shadow:0 30px 80px rgba(0,0,0,.45);
+}
+.login-side{
+  flex:1;min-width:0;
+  background:linear-gradient(165deg,#123253 0%,#0C2138 100%);
+  color:#DCE7F2;
+  padding:44px 40px;
+  display:flex;flex-direction:column;justify-content:space-between;
+  position:relative;
+}
+.login-side::after{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(400px 220px at 110% 0%, rgba(217,119,6,.18), transparent 70%);
+}
+.login-side .tag{
+  display:inline-block;
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;letter-spacing:.18em;
+  color:var(--accent);
+  background:rgba(217,119,6,.15);
+  border:1px solid rgba(217,119,6,.35);
+  padding:3px 8px;border-radius:4px;
+}
+.login-side h1{font-size:26px;color:#fff;margin-top:14px;line-height:1.25;}
+.login-side .desc{margin-top:10px;font-size:13px;color:#9FB4C9;line-height:1.65;max-width:300px;}
+.login-side .feature-list{margin-top:28px;display:flex;flex-direction:column;gap:12px;position:relative;}
+.login-side .feature{
+  display:flex;align-items:center;gap:11px;font-size:12.5px;color:#C4D3E2;
+}
+.login-side .feature .fic{
+  width:30px;height:30px;border-radius:8px;flex-shrink:0;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);
+  display:flex;align-items:center;justify-content:center;font-size:14px;
+}
+.login-side .foot{font-size:11px;color:#6E86A0;position:relative;margin-top:30px;}
+.login-card{
+  background:#fff;width:400px;max-width:100%;flex-shrink:0;
+  padding:44px 38px;
+  display:flex;flex-direction:column;justify-content:center;
+}
+.login-card h2{font-size:21px;color:var(--primary);}
+.login-card .sub{margin:6px 0 26px;font-size:13px;color:var(--text-muted);}
+.login-card .form-group{margin-bottom:16px;}
+.login-card .form-group input{padding:11px 13px;font-size:14px;border-radius:9px;}
+.login-error{
+  background:var(--danger-bg);color:var(--danger);border:1px solid #F3D4D4;border-radius:8px;
+  padding:9px 12px;font-size:12.5px;margin-bottom:14px;
+}
+.login-error.hidden{display:none;}
+#btn-login{width:100%;justify-content:center;padding:12px 16px;font-size:14px;border-radius:9px;margin-top:4px;}
+.login-card .brand-footer{margin-top:26px;text-align:center;font-size:11px;color:var(--text-faint);}
+@media (max-width:760px){
+  .login-side{display:none;}
+  .login-shell{max-width:420px;}
+  .login-card{width:100%;padding:36px 28px;}
+}
+.app.hidden{display:none;}
+.loading-screen{
+  position:fixed;inset:0;z-index:400;
+  background:linear-gradient(160deg,#0F2942 0%,#0A1D30 100%);
+  display:flex;align-items:center;justify-content:center;
+}
+.loading-screen.hidden{display:none;}
+.loading-box{text-align:center;color:#DCE7F2;}
+.loading-spinner{
+  width:38px;height:38px;border-radius:50%;
+  border:3px solid rgba(255,255,255,.2);border-top-color:var(--accent);
+  margin:0 auto 14px;animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-text{font-size:13px;color:#9FB4C9;}
+
+/* Print area (Phiếu xuất kho) */
+#print-area{display:none;}
+@page{
+  size: A4 portrait;
+  margin: 14mm 12mm;
+}
+@media print{
+  html, body{width:210mm;background:#fff !important;}
+  body > *:not(#print-area){display:none !important;}
+  #print-area{display:block !important;background:#fff !important;}
+  .print-doc{font-family:'Times New Roman',Times,serif;color:#000;padding:0 2mm;box-sizing:border-box;background:#fff !important;}
+  .print-company{text-align:center;font-weight:700;font-size:14pt;text-transform:uppercase;letter-spacing:.01em;}
+  .print-address{text-align:center;font-size:11pt;margin-top:3px;}
+  .print-date{text-align:right;font-size:11pt;margin-top:18px;}
+  .print-title{text-align:center;font-weight:700;font-size:18pt;margin-top:10px;text-transform:uppercase;letter-spacing:.04em;}
+  .print-subtitle{text-align:center;font-size:11pt;margin-top:3px;}
+  .print-info-row{display:flex;justify-content:space-between;gap:24px;margin-top:16px;font-size:11.5pt;line-height:1.6;}
+  .print-table-wrap{margin-top:18px;border:1.5pt solid #000;}
+  .print-table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:10.5pt;background:#fff !important;}
+  .print-table th,.print-table td{border:1pt solid #000;padding:6px 6px;vertical-align:middle;overflow-wrap:break-word;white-space:normal;background:#fff !important;}
+  .print-table th{text-align:center;font-weight:700;font-size:9.5pt;line-height:1.25;}
+  .print-table tbody tr:first-child td{border-top:none;}
+  .print-table tbody tr td:first-child, .print-table thead tr th:first-child{border-left:none;}
+  .print-table tbody tr td:last-child, .print-table thead tr th:last-child{border-right:none;}
+  .print-table thead tr th{border-top:none;}
+  .print-table tbody tr:last-child td{border-bottom:none;border-top:1.4pt solid #000;}
+  .print-signatures{display:flex;justify-content:space-around;margin-top:40px;text-align:center;font-size:11.5pt;font-weight:700;}
+  .print-signatures > div{flex:1;}
+  .print-signature-names{margin-top:64px;font-weight:600;font-size:11pt;}
+  .print-signature-names > div{flex:1;}
+  .print-sign-sub{font-weight:400;font-style:italic;font-size:9.5pt;}
+}
+</style>
+</head>
+<body>
+
+<div class="login-screen hidden" id="login-screen">
+  <div class="login-shell">
+    <div class="login-side">
+      <div>
+        <span class="tag">WMS · HỆ THỐNG NỘI BỘ</span>
+        <h1>Quản Lý<br>Kho Vật Tư</h1>
+        <p class="desc">Theo dõi nhập – xuất – tồn kho chính xác theo thời gian thực, quản lý đa kho tập trung trên một hệ thống duy nhất.</p>
+        <div class="feature-list">
+          <div class="feature"><span class="fic">📥</span> Nhập kho mua hàng &amp; nhập trực tiếp</div>
+          <div class="feature"><span class="fic">📤</span> Xuất sản xuất, chuyển kho, kiểm kho</div>
+          <div class="feature"><span class="fic">📊</span> Tồn kho &amp; giá trị hàng hóa theo từng kho</div>
+          <div class="feature"><span class="fic">🔐</span> Phân quyền Admin / Quản lý / Nhân viên</div>
+        </div>
+      </div>
+      <div class="foot">© Công ty Cổ phần Kén tằm Hồng Hà</div>
+    </div>
+    <div class="login-card">
+      <h2>Đăng nhập</h2>
+      <p class="sub">Vui lòng nhập thông tin tài khoản để tiếp tục</p>
+      <div class="form-group">
+        <label>Email</label>
+        <input id="login-username" type="email" placeholder="VD: [email protected]" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label>Mật khẩu</label>
+        <input id="login-password" type="password" placeholder="Nhập mật khẩu" autocomplete="current-password">
+      </div>
+      <div id="login-error" class="login-error hidden"></div>
+      <button class="btn btn-primary" id="btn-login">Đăng nhập</button>
+      <div class="brand-footer">Hệ thống quản lý kho vật tư nội bộ</div>
+    </div>
+  </div>
+</div>
+
+<div class="loading-screen" id="loading-screen">
+  <div class="loading-box">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Đang kết nối và tải dữ liệu...</div>
+  </div>
+</div>
+
+<div class="app hidden" id="app-root">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+      </div>
+      <div>
+        <h1>Kho Vật Tư</h1>
+        <p>Hệ thống quản lý nội bộ</p>
+      </div>
+    </div>
+    <nav class="nav" id="nav">
+      <div class="nav-label">Tổng quan</div>
+      <div class="nav-item active" data-view="tonkho"><span class="nic"><svg viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 13v4"/><path d="M12 9v8"/><path d="M17 5v12"/></svg></span> Tổng quan &amp; Tồn kho</div>
+      <div class="nav-label">Danh mục</div>
+      <div class="nav-item" data-view="mahang"><span class="nic"><svg viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></span> Mã hàng</div>
+      <div class="nav-item" data-view="kho"><span class="nic"><svg viewBox="0 0 24 24"><path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"/><path d="M6 18h12"/><path d="M6 14h12"/><rect x="6" y="10" width="12" height="12"/></svg></span> Kho hàng</div>
+      <div class="nav-item" data-view="nhacungcap"><span class="nic"><svg viewBox="0 0 24 24"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.62l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg></span> Nhà cung cấp</div>
+      <div class="nav-item" data-view="nguoinhan"><span class="nic"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Người nhận hàng</div>
+      <div class="nav-label">Nghiệp vụ kho</div>
+      <div class="nav-item" data-view="nhap"><span class="nic"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M8 5H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-4"/></svg></span> Nhập kho</div>
+      <div class="nav-item" data-view="xuat"><span class="nic"><svg viewBox="0 0 24 24"><path d="M12 15V3"/><path d="m8 7 4-4 4 4"/><path d="M8 13H4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2h-4"/></svg></span> Xuất kho</div>
+      <div class="nav-item" data-view="dexuat"><span class="nic"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15l2 2 4-4"/></svg></span> Đề xuất mua vật tư</div>
+      <div class="nav-item" data-view="lichsu"><span class="nic"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg></span> Lịch sử phiếu</div>
+      <div class="nav-label" id="nav-sep-admin">Quản trị</div>
+      <div class="nav-item" data-view="nguoidung"><span class="nic"><svg viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span> Người sử dụng</div>
+    </nav>
+    <div class="sidebar-foot">
+      <div id="user-badge"></div>
+      <div class="foot-actions">
+        <button class="sidebar-btn" id="btn-export"><span class="bic"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg></span> Sao lưu dữ liệu (JSON)</button>
+        <button class="sidebar-btn" id="btn-import"><span class="bic"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg></span> Khôi phục từ file</button>
+        <input type="file" id="import-file" accept=".json" style="display:none;">
+        <button class="sidebar-btn logout" id="btn-logout"><span class="bic"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg></span> Đăng xuất</button>
+      </div>
+    </div>
+  </aside>
+
+  <div class="content">
+    <div class="topbar">
+      <button id="menu-toggle" class="icon-btn" style="margin-right:-4px;">☰</button>
+      <div>
+        <h2 id="view-title">Tổng quan &amp; Tồn kho</h2>
+        <div class="sub" id="view-sub">Dữ liệu đồng bộ real-time qua Firebase — nhiều người dùng cùng lúc</div>
+      </div>
+      <div class="toolbar" id="topbar-actions"></div>
+    </div>
+
+    <!-- VIEW: TỒN KHO -->
+    <section class="view" id="view-tonkho">
+      <div class="cards-row" id="tonkho-stats"></div>
+      <div class="card">
+        <div class="card-head">
+          <div class="toolbar">
+            <select id="tk-filter-kho"></select>
+            <input type="text" id="tk-search" placeholder="Tìm mã hàng / tên hàng...">
+            <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-muted);cursor:pointer;">
+              <input type="checkbox" id="tk-only-low"> Chỉ hiện dưới mức tối thiểu
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--danger);cursor:pointer;">
+              <input type="checkbox" id="tk-only-negative"> Chỉ hiện tồn kho âm
+            </label>
+          </div>
+        </div>
+        <div class="card-body tbl-wrap">
+          <table>
+            <thead><tr>
+              <th>Mã hàng</th><th>Tên hàng</th><th>Model / Thông số</th><th>Nhóm</th><th>ĐVT</th><th class="right">Tồn tối thiểu</th><th class="right">Tồn kho</th><th class="right">Đơn giá</th><th class="right">Thành tiền</th>
+            </tr></thead>
+            <tbody id="tonkho-tbody"></tbody>
+          </table>
+        </div>
+        <div class="card-body" id="tk-pagination" style="border-top:1px solid var(--border);padding-top:12px;"></div>
+      </div>
+    </section>
+
+    <!-- VIEW: MÃ HÀNG -->
+    <section class="view hidden" id="view-mahang">
+      <div class="card">
+        <div class="card-head">
+          <div class="toolbar">
+            <input type="text" id="mh-search" placeholder="Tìm theo mã hàng, tên hàng, nhóm...">
+          </div>
+          <button class="btn btn-primary" id="btn-add-mahang">+ Thêm mã hàng</button>
+        </div>
+        <div class="card-body tbl-wrap">
+          <table>
+            <thead><tr>
+              <th>Mã hàng</th><th>Tên hàng</th><th>Model / Thông số</th><th>ĐVT</th><th>Nhóm</th><th class="right">Tồn tối thiểu</th><th>Ghi chú</th><th class="center">Thao tác</th>
+            </tr></thead>
+            <tbody id="mahang-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW: KHO -->
+    <section class="view hidden" id="view-kho">
+      <div class="card">
+        <div class="card-head">
+          <div class="section-title" style="margin:0;">Danh sách kho / địa điểm lưu trữ</div>
+          <button class="btn btn-primary" id="btn-add-kho">+ Thêm kho</button>
+        </div>
+        <div class="card-body tbl-wrap">
+          <table>
+            <thead><tr><th>Mã kho</th><th>Tên kho</th><th>Địa chỉ</th><th>Ghi chú</th><th class="center">Thao tác</th></tr></thead>
+            <tbody id="kho-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div id="kho-orphan-section" style="margin-top:16px;"></div>
+    </section>
+
+    <!-- VIEW: NHÀ CUNG CẤP -->
+    <section class="view hidden" id="view-nhacungcap">
+      <div class="card">
+        <div class="card-head">
+          <div class="toolbar">
+            <input type="text" id="ncc-search" placeholder="Tìm theo tên, người liên hệ, SĐT...">
+          </div>
+          <button class="btn btn-primary" id="btn-add-nhacungcap">+ Thêm nhà cung cấp</button>
+        </div>
+        <div class="card-body tbl-wrap">
+          <table>
+            <thead><tr><th>Tên nhà cung cấp</th><th>Địa chỉ</th><th>Loại hàng cung cấp</th><th>Người liên hệ</th><th>Số điện thoại</th><th class="center">Thao tác</th></tr></thead>
+            <tbody id="nhacungcap-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW: NGƯỜI NHẬN HÀNG -->
+    <section class="view hidden" id="view-nguoinhan">
+      <div class="card">
+        <div class="card-head">
+          <div class="toolbar">
+            <input type="text" id="nn-search" placeholder="Tìm theo họ tên, bộ phận, SĐT...">
+          </div>
+          <button class="btn btn-primary" id="btn-add-nguoinhan">+ Thêm người nhận hàng</button>
+        </div>
+        <div class="card-body tbl-wrap">
+          <table>
+            <thead><tr><th>Họ và tên</th><th>Số điện thoại</th><th>Bộ phận</th><th class="center">Thao tác</th></tr></thead>
+            <tbody id="nguoinhan-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW: NGƯỜI SỬ DỤNG -->
+    <section class="view hidden" id="view-nguoidung">
+      <div class="card">
+        <div class="card-head">
+          <div class="toolbar">
+            <input type="text" id="nd-search" placeholder="Tìm theo họ tên, tên đăng nhập...">
+          </div>
+          <button class="btn btn-primary" id="btn-add-nguoidung">+ Thêm người sử dụng</button>
+        </div>
+        <div class="card-body tbl-wrap">
+          <table>
+            <thead><tr><th>Họ và tên</th><th>Email</th><th>Quyền truy cập</th><th>Bộ phận</th><th>Số điện thoại</th><th class="center">Thao tác</th></tr></thead>
+            <tbody id="nguoidung-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW: NHẬP KHO -->
+    <section class="view hidden" id="view-nhap">
+      <div class="card">
+        <div class="card-head">
+          <div class="toolbar">
+            <select id="nk-filter-loai">
+              <option value="">Tất cả loại nhập</option>
+              <option value="mua">Nhập kho mua hàng</option>
+              <option value="truc_tiep">Nhập kho trực tiếp</option>
+            </select>
+            <select id="nk-filter-kho"><option value="">Tất cả kho</option></select>
+            <input type="text" id="nk-search-vattu" placeholder="Tìm theo mã/tên vật tư trong phiếu...">
+            <input type="date" id="nk-tu-ngay" title="Từ ngày">
+            <span style="color:var(--text-faint);font-size:12px;">đến</span>
+            <input type="date" id="nk-den-ngay" title="Đến ngày">
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-ghost" id="btn-export-nhap">⬇️ Xuất Excel</button>
+            <button class="btn btn-accent" id="btn-add-nhap">+ Tạo phiếu nhập kho</button>
+          </div>
+        </div>
+        <div class="card-body tbl-wrap">
+          <table>
+            <thead><tr>
+              <th style="width:34px;"></th><th>Số phiếu</th><th>Ngày</th><th>Loại</th><th>Kho nhập</th><th>Nhà cung cấp</th><th class="right">Thành tiền</th><th class="center">Thao tác</th>
+            </tr></thead>
+            <tbody id="nhap-tbody"></tbody>
+          </table>
+        </div>
+        <div class="card-body" id="nk-pagination" style="border-top:1px solid var(--border);padding-top:12px;"></div>
+      </div>
+    </section>
+
+    <!-- VIEW: XUẤT KHO -->
+    <section class="view hidden" id="view-xuat">
+      <div class="card">
+        <div class="card-head">
+          <div class="toolbar">
+            <select id="xk-filter-loai">
+              <option value="">Tất cả loại xuất</option>
+              <option value="san_xuat">Xuất sản xuất</option>
+              <option value="chuyen_kho">Xuất chuyển kho</option>
+              <option value="kiem_kho">Kiểm kho</option>
+            </select>
+            <select id="xk-filter-kho"><option value="">Tất cả kho</option></select>
+            <input type="text" id="xk-search-vattu" placeholder="Tìm theo mã/tên vật tư trong phiếu...">
+            <input type="date" id="xk-tu-ngay" title="Từ ngày">
+            <span style="color:var(--text-faint);font-size:12px;">đến</span>
+            <input type="date" id="xk-den-ngay" title="Đến ngày">
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-ghost" id="btn-export-xuat">⬇️ Xuất Excel</button>
+            <button class="btn btn-accent" id="btn-add-xuat">+ Tạo phiếu xuất kho</button>
+          </div>
+        </div>
+        <div class="card-body tbl-wrap">
+          <table>
+            <thead><tr>
+              <th style="width:34px;"></th><th>Số phiếu</th><th>Ngày</th><th>Loại</th><th>Kho xuất</th><th>Nơi nhận / Kho nhận</th><th class="center">Thao tác</th>
+            </tr></thead>
+            <tbody id="xuat-tbody"></tbody>
+          </table>
+        </div>
+        <div class="card-body" id="xk-pagination" style="border-top:1px solid var(--border);padding-top:12px;"></div>
+      </div>
+    </section>
+
+    <!-- VIEW: ĐỀ XUẤT MUA VẬT TƯ -->
+    <section class="view hidden" id="view-dexuat">
+      <div class="card">
+        <div class="card-head">
+          <div class="toolbar">
+            <select id="dx-filter-trangthai">
+              <option value="">Tất cả trạng thái</option>
+              <option value="cho_duyet">Chờ duyệt</option>
+              <option value="da_duyet">Đã duyệt</option>
+              <option value="tu_choi">Từ chối</option>
+            </select>
+            <input type="text" id="dx-search-vattu" placeholder="Tìm theo tên vật tư trong phiếu...">
+            <input type="date" id="dx-tu-ngay" title="Từ ngày">
+            <span style="color:var(--text-faint);font-size:12px;">đến</span>
+            <input type="date" id="dx-den-ngay" title="Đến ngày">
+          </div>
+          <button class="btn btn-accent" id="btn-add-dexuat">+ Tạo phiếu đề xuất</button>
+        </div>
+        <div class="card-body tbl-wrap">
+          <table>
+            <thead><tr>
+              <th style="width:34px;"></th><th>Số phiếu</th><th>Ngày</th><th>Người đề xuất</th><th>Bộ phận</th><th>Trạng thái</th><th class="center">Thao tác</th>
+            </tr></thead>
+            <tbody id="dexuat-tbody"></tbody>
+          </table>
+        </div>
+        <div class="card-body" id="dx-pagination" style="border-top:1px solid var(--border);padding-top:12px;"></div>
+      </div>
+    </section>
+
+    <!-- VIEW: LỊCH SỬ -->
+    <section class="view hidden" id="view-lichsu">
+      <div class="card">
+        <div class="card-head">
+          <div class="toolbar">
+            <select id="ls-filter-nhomloai">
+              <option value="">Tất cả phiếu</option>
+              <option value="nhap">Chỉ phiếu nhập</option>
+              <option value="xuat">Chỉ phiếu xuất</option>
+            </select>
+            <select id="ls-filter-kho"><option value="">Tất cả kho</option></select>
+            <input type="date" id="ls-tu-ngay">
+            <span style="color:var(--text-faint);font-size:12px;">đến</span>
+            <input type="date" id="ls-den-ngay">
+          </div>
+        </div>
+        <div class="card-body tbl-wrap">
+          <table>
+            <thead><tr><th>Số phiếu</th><th>Ngày</th><th>Nhóm</th><th>Loại</th><th>Kho</th><th>Người thực hiện</th><th class="center">Xem</th></tr></thead>
+            <tbody id="lichsu-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-overlay">
+  <div class="modal" id="modal-container"></div>
+</div>
+
+<div id="toast-container"></div>
+
+<div id="print-area"></div>
+
+<script>
+/* ============================= STATE & STORAGE ============================= */
+/* Thông tin công ty dùng khi in phiếu — chỉnh trực tiếp 3 dòng này nếu công ty đổi tên/địa chỉ */
+const COMPANY_NAME = 'CÔNG TY CỔ PHẦN KÉN TẰM HỒNG HÀ';
+const COMPANY_ADDRESS = 'Thôn Hoàng Ân, xã Chư Prông, tỉnh Gia Lai';
+const COMPANY_PROVINCE = 'Gia Lai';
+
+/* ============================= FIREBASE ============================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyAy_zG8EXWwRSSFyyve8BXxBoipYuREdYQ",
+  authDomain: "qlvattu.firebaseapp.com",
+  databaseURL: "https://qlvattu-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "qlvattu",
+  storageBucket: "qlvattu.firebasestorage.app",
+  messagingSenderId: "895102986284",
+  appId: "1:895102986284:web:90046255ec96030422c989",
+  measurementId: "G-63JL42K9MH"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.database();
+auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+
+/* Các nhánh dữ liệu nghiệp vụ đồng bộ real-time qua Firebase (không gồm 'userProfiles',
+   vì nhánh đó gắn với UID của Firebase Authentication, xử lý riêng ở phần AUTH bên dưới). */
+const DATA_KEYS = ['items','warehouses','stock','inbound','outbound','counters','lastUser','suppliers','recipients','dexuat'];
+function defaultForKey(k){
+  if(k==='stock' || k==='counters') return {};
+  if(k==='lastUser') return '';
+  return [];
+}
+
+let state = { items: [], warehouses: [], stock: {}, inbound: [], outbound: [], counters: {}, lastUser: '', users: [], suppliers: [], recipients: [], dexuat: [] };
+
+let listenersAttached = false;
+let appStarted = false;
+/* Gắn listener real-time cho toàn bộ dữ liệu nghiệp vụ + danh sách người dùng (userProfiles).
+   Trả về Promise chỉ hoàn tất khi đã nhận được dữ liệu lần đầu của TẤT CẢ các nhánh — dùng để
+   biết khi nào có thể hiển thị ứng dụng. Các lần cập nhật sau đó sẽ tự làm mới màn hình. */
+function attachDataListenersAndWaitFirstLoad(){
+  if(listenersAttached) return Promise.resolve();
+  listenersAttached = true;
+  const promises = DATA_KEYS.map(k => new Promise(resolve=>{
+    let first = true;
+    db.ref(k).on('value', snap=>{
+      const val = snap.val();
+      state[k] = (val===null || val===undefined) ? defaultForKey(k) : val;
+      if(first){ first=false; resolve(); }
+      else if(appStarted) refreshAll();
+    }, err=>{ console.error('Lỗi đọc dữ liệu "'+k+'":', err); if(first){ first=false; resolve(); } });
+  }));
+  promises.push(new Promise(resolve=>{
+    let first = true;
+    db.ref('userProfiles').on('value', snap=>{
+      const val = snap.val() || {};
+      state.users = Object.keys(val).map(uid=>({ uid, ...val[uid] }));
+      if(first){ first=false; resolve(); }
+      else if(appStarted){ renderUserBadge(); if(canAccess('nguoidung')) renderNguoiDung(); applyRolePermissions(); }
+    }, err=>{ console.error('Lỗi đọc danh sách người dùng:', err); if(first){ first=false; resolve(); } });
+  }));
+  return Promise.all(promises);
+}
+function detachDataListeners(){
+  if(!listenersAttached) return;
+  listenersAttached = false;
+  DATA_KEYS.forEach(k=> db.ref(k).off());
+  db.ref('userProfiles').off();
+}
+function saveKey(k){ db.ref(k).set(state[k]===undefined ? defaultForKey(k) : state[k]); }
+function saveAll(){ DATA_KEYS.forEach(k=>saveKey(k)); }
+
+function genId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+function todayISO(){ const d = new Date(); return d.toISOString().slice(0,10); }
+function nowDateTimeLocal(){
+  const d = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function fmtDate(iso){
+  if(!iso) return '';
+  const d = new Date(iso);
+  if(isNaN(d)) return iso;
+  const pad = n => String(n).padStart(2,'0');
+  return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function fmtDDMMYYYY(dateStr){
+  if(!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  if(isNaN(d)) return dateStr;
+  const pad = n => String(n).padStart(2,'0');
+  return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;
+}
+function fmtNum(n){ n = Number(n)||0; return n.toLocaleString('vi-VN', {maximumFractionDigits:2}); }
+function fmtMoney(n){ n = Number(n)||0; return n.toLocaleString('vi-VN') + ' đ'; }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* Sequential document numbers: PN-YYMMDD-001 / PX-YYMMDD-001 / PK-YYMMDD-001 */
+function genSoPhieu(prefix){
+  const d = new Date();
+  const ymd = d.getFullYear().toString().slice(2) + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
+  const key = prefix + ymd;
+  state.counters[key] = (state.counters[key]||0) + 1;
+  saveKey('counters');
+  return `${prefix}${ymd}-${String(state.counters[key]).padStart(3,'0')}`;
+}
+
+/* ============================= STOCK HELPERS ============================= */
+function getStock(maKho, maHang){
+  return (state.stock[maKho] && state.stock[maKho][maHang]) || 0;
+}
+function setStock(maKho, maHang, val){
+  if(!state.stock[maKho]) state.stock[maKho] = {};
+  state.stock[maKho][maHang] = Math.round((val + Number.EPSILON) * 1000) / 1000;
+}
+function adjustStock(maKho, maHang, delta){
+  setStock(maKho, maHang, getStock(maKho, maHang) + delta);
+}
+function totalStockOfItem(maHang){
+  let t = 0;
+  for(const k of state.warehouses){ t += getStock(k.ma, maHang); }
+  return t;
+}
+
+/* ============================= TOAST ============================= */
+function toast(msg, type){
+  const box = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className = 'toast' + (type ? ' '+type : '');
+  el.textContent = msg;
+  box.appendChild(el);
+  setTimeout(()=>{ el.style.transition='opacity .25s'; el.style.opacity='0'; setTimeout(()=>el.remove(),250); }, 2600);
+}
+
+/* ============================= MODAL ============================= */
+const modalOverlay = document.getElementById('modal-overlay');
+const modalContainer = document.getElementById('modal-container');
+function openModal(html, wide){
+  modalContainer.className = 'modal' + (wide ? ' wide' : '');
+  modalContainer.innerHTML = html;
+  modalOverlay.classList.remove('hidden');
+}
+function closeModal(){
+  modalOverlay.classList.add('hidden');
+  modalContainer.innerHTML = '';
+}
+modalOverlay.addEventListener('click', e=>{ if(e.target === modalOverlay) closeModal(); });
+
+/* ============================= AUTH / PHÂN QUYỀN ============================= */
+let currentUser = null;
+const ROLE_LABELS = { admin: 'Admin', quanly: 'Quản lý', nhanvien: 'Nhân viên' };
+const ROLE_PERMISSIONS = {
+  admin:    ['tonkho','mahang','kho','nhacungcap','nguoinhan','nhap','xuat','dexuat','lichsu','nguoidung'],
+  quanly:   ['tonkho','mahang','kho','nhacungcap','nguoinhan','nhap','xuat','dexuat','lichsu'],
+  nhanvien: ['tonkho','nhap','xuat','dexuat','lichsu'],
+};
+function canAccess(view){
+  if(!currentUser) return false;
+  const perms = ROLE_PERMISSIONS[currentUser.quyen] || [];
+  return perms.includes(view);
+}
+function applyRolePermissions(){
+  document.querySelectorAll('.nav-item').forEach(el=>{
+    el.style.display = canAccess(el.dataset.view) ? '' : 'none';
+  });
+  // Ẩn nhãn nhóm nếu mọi mục bên dưới nó (đến nhãn kế tiếp) đều bị ẩn
+  document.querySelectorAll('.nav-label').forEach(label=>{
+    let anyVisible = false;
+    let el = label.nextElementSibling;
+    while(el && !el.classList.contains('nav-label')){
+      if(el.classList.contains('nav-item') && el.style.display !== 'none') anyVisible = true;
+      el = el.nextElementSibling;
+    }
+    label.style.display = anyVisible ? '' : 'none';
+  });
+  document.getElementById('btn-import').style.display = (currentUser && currentUser.quyen==='admin') ? '' : 'none';
+}
+function renderUserBadge(){
+  if(!currentUser) return;
+  const roleLabel = ROLE_LABELS[currentUser.quyen] || currentUser.quyen;
+  const displayName = currentUser.hoTen || currentUser.email;
+  const initials = displayName.trim().split(/\s+/).slice(-2).map(w=>w[0]).join('').toUpperCase();
+  document.getElementById('user-badge').innerHTML = `
+    <div class="user-chip">
+      <div class="avatar">${esc(initials)}</div>
+      <div class="uinfo">
+        <div class="uname" title="${esc(displayName)}">${esc(displayName)}</div>
+        <span class="urole">${esc(roleLabel)}</span>
+      </div>
+    </div>`;
+}
+/* Cho phép gõ tên đăng nhập không kèm "@" (VD: nv1) để khỏi cần cấp email thật cho từng
+   nhân viên — tự động ghép thành email hợp lệ dạng nv1@qlvattu.local để dùng với Firebase Auth. */
+function normalizeEmailInput(val){
+  val = (val||'').trim();
+  if(!val) return val;
+  return val.includes('@') ? val : (val + '@qlvattu.local');
+}
+function mapFirebaseAuthError(err){
+  const code = err && err.code || '';
+  const map = {
+    'auth/invalid-email': 'Email không hợp lệ.',
+    'auth/user-not-found': 'Tài khoản hoặc mật khẩu không đúng.',
+    'auth/wrong-password': 'Tài khoản hoặc mật khẩu không đúng.',
+    'auth/invalid-credential': 'Tài khoản hoặc mật khẩu không đúng.',
+    'auth/too-many-requests': 'Bạn đã thử sai quá nhiều lần, vui lòng thử lại sau ít phút.',
+    'auth/network-request-failed': 'Không thể kết nối tới máy chủ, vui lòng kiểm tra mạng.',
+    'auth/email-already-in-use': 'Email/tên đăng nhập này đã được sử dụng.',
+    'auth/weak-password': 'Mật khẩu quá yếu (cần tối thiểu 6 ký tự).',
+    'auth/user-disabled': 'Tài khoản này đã bị vô hiệu hóa.',
+  };
+  return map[code] || ('Đã có lỗi xảy ra: ' + (err&&err.message ? err.message : 'không rõ nguyên nhân') );
+}
+function showLoginScreen(){
+  document.getElementById('loading-screen').classList.add('hidden');
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('app-root').classList.add('hidden');
+  document.getElementById('login-username').focus();
+}
+function showLoadingScreen(){
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app-root').classList.add('hidden');
+  document.getElementById('loading-screen').classList.remove('hidden');
+}
+function showApp(){
+  document.getElementById('loading-screen').classList.add('hidden');
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app-root').classList.remove('hidden');
+  fillWarehouseSelects();
+  applyRolePermissions();
+  renderUserBadge();
+  switchView(canAccess('tonkho') ? 'tonkho' : (ROLE_PERMISSIONS[currentUser.quyen][0] || 'tonkho'));
+}
+function doLogin(){
+  const email = normalizeEmailInput(document.getElementById('login-username').value);
+  const password = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  errEl.classList.add('hidden');
+  if(!email || !password){ errEl.textContent = 'Vui lòng nhập đầy đủ email/tên đăng nhập và mật khẩu.'; errEl.classList.remove('hidden'); return; }
+  auth.signInWithEmailAndPassword(email, password).catch(err=>{
+    errEl.textContent = mapFirebaseAuthError(err);
+    errEl.classList.remove('hidden');
+  });
+}
+function doLogout(){
+  if(!confirm('Đăng xuất khỏi hệ thống?')) return;
+  auth.signOut();
+}
+document.getElementById('btn-login').addEventListener('click', doLogin);
+document.getElementById('login-password').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+document.getElementById('login-username').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('login-password').focus(); });
+document.getElementById('btn-logout').addEventListener('click', doLogout);
+
+/* Lắng nghe trạng thái đăng nhập Firebase. Khi có người dùng đăng nhập, tải toàn bộ dữ liệu
+   real-time rồi mới hiển thị ứng dụng; nếu tài khoản chưa có hồ sơ (userProfiles) và đây là
+   người đầu tiên từng đăng nhập, tự động cấp quyền Admin để "mở khóa" hệ thống lần đầu. */
+auth.onAuthStateChanged(async (user)=>{
+  if(user){
+    showLoadingScreen();
+    try{
+      await attachDataListenersAndWaitFirstLoad();
+      let profile = state.users.find(u=>u.uid===user.uid);
+      if(!profile){
+        if(state.users.length===0){
+          const newProfile = { hoTen: user.email, email: user.email, quyen:'admin', boPhan:'', sdt:'' };
+          await db.ref('userProfiles/'+user.uid).set(newProfile);
+          profile = { uid: user.uid, ...newProfile };
+          toast('Tài khoản đầu tiên đã được tự động cấp quyền Admin', 'success');
+        }else{
+          toast('Tài khoản của bạn chưa được cấp quyền truy cập hệ thống. Vui lòng liên hệ Admin.', 'error');
+          detachDataListeners();
+          await auth.signOut();
+          return;
+        }
+      }
+      currentUser = profile;
+      appStarted = true;
+      document.getElementById('login-username').value='';
+      document.getElementById('login-password').value='';
+      showApp();
+    }catch(err){
+      console.error(err);
+      toast('Không thể kết nối tới Firebase: ' + (err&&err.message?err.message:''), 'error');
+      showLoginScreen();
+    }
+  }else{
+    detachDataListeners();
+    appStarted = false;
+    currentUser = null;
+    showLoginScreen();
+  }
+});
+
+
+/* ============================= NAV ============================= */
+const VIEW_TITLES = {
+  tonkho: ['Tổng quan & Tồn kho', 'Dữ liệu đồng bộ real-time qua Firebase — nhiều người dùng cùng lúc'],
+  mahang: ['Quản lý mã hàng', 'Danh mục vật tư đang theo dõi trong hệ thống'],
+  kho: ['Quản lý kho', 'Danh sách các kho / địa điểm lưu trữ vật tư'],
+  nhacungcap: ['Quản lý nhà cung cấp', 'Danh sách nhà cung cấp vật tư'],
+  nguoinhan: ['Quản lý người nhận hàng', 'Danh sách người nhận hàng khi xuất kho sản xuất'],
+  nhap: ['Nhập kho', 'Tạo phiếu nhập kho mua hàng hoặc nhập kho trực tiếp'],
+  xuat: ['Xuất kho', 'Xuất sản xuất, chuyển kho nội bộ, hoặc kiểm kho định kỳ'],
+  dexuat: ['Đề xuất mua vật tư', 'Tạo và theo dõi các phiếu đề xuất mua vật tư mới'],
+  lichsu: ['Lịch sử phiếu', 'Tra cứu toàn bộ phiếu nhập / xuất đã tạo'],
+  nguoidung: ['Quản lý người sử dụng', 'Tài khoản đăng nhập và phân quyền truy cập hệ thống'],
+};
+function switchView(view){
+  if(!canAccess(view)){ toast('Bạn không có quyền truy cập mục này', 'error'); return; }
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active', el.dataset.view===view));
+  document.querySelectorAll('.view').forEach(el=>el.classList.add('hidden'));
+  document.getElementById('view-'+view).classList.remove('hidden');
+  document.getElementById('view-title').innerHTML = VIEW_TITLES[view][0];
+  document.getElementById('view-sub').textContent = VIEW_TITLES[view][1];
+  document.getElementById('sidebar').classList.remove('open');
+  renderView(view);
+}
+document.getElementById('nav').addEventListener('click', e=>{
+  const item = e.target.closest('.nav-item');
+  if(item) switchView(item.dataset.view);
+});
+document.getElementById('menu-toggle').addEventListener('click', ()=>{
+  document.getElementById('sidebar').classList.toggle('open');
+});
+
+function renderView(view){
+  if(view==='tonkho') renderTonKho();
+  else if(view==='mahang') renderMaHang();
+  else if(view==='kho') renderKho();
+  else if(view==='nhacungcap') renderNhaCungCap();
+  else if(view==='nguoinhan') renderNguoiNhan();
+  else if(view==='nhap') renderNhap();
+  else if(view==='xuat') renderXuat();
+  else if(view==='dexuat') renderDeXuat();
+  else if(view==='lichsu') renderLichSu();
+  else if(view==='nguoidung') renderNguoiDung();
+}
+function refreshAll(){
+  renderView('tonkho'); renderView('mahang'); renderView('kho'); renderView('nhacungcap');
+  renderView('nguoinhan'); renderView('nhap'); renderView('xuat'); renderView('dexuat'); renderView('lichsu'); renderView('nguoidung');
+}
+
+/* ============================= DATALIST HELPERS ============================= */
+function distinctGroups(){
+  return [...new Set(state.items.map(i=>i.nhom).filter(Boolean))].sort();
+}
+function commonUnits(){
+  const fromItems = state.items.map(i=>i.dvt).filter(Boolean);
+  const base = ['Cái','Chiếc','Kg','Gram','Lít','Mét','Cuộn','Bao','Hộp','Thùng','Bó','Cây','Tấn'];
+  return [...new Set([...base, ...fromItems])];
+}
+
+/* =====================================================================
+   MODULE 1: MÃ HÀNG
+===================================================================== */
+function renderMaHang(){
+  const tbody = document.getElementById('mahang-tbody');
+  const q = (document.getElementById('mh-search').value||'').trim().toLowerCase();
+  let list = state.items.slice().sort((a,b)=>a.ma.localeCompare(b.ma));
+  if(q) list = list.filter(i => (i.ma+' '+i.ten+' '+(i.nhom||'')+' '+(i.model||'')).toLowerCase().includes(q));
+  if(list.length===0){
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="8">Chưa có mã hàng nào phù hợp.<br>Nhấn "+ Thêm mã hàng" để bắt đầu khai báo danh mục vật tư.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map(i=>{
+    const ton = totalStockOfItem(i.ma);
+    const low = i.tonToiThieu && ton < Number(i.tonToiThieu);
+    return `<tr>
+      <td><span class="tag-code">${esc(i.ma)}</span></td>
+      <td>${esc(i.ten)}</td>
+      <td style="max-width:200px;color:var(--text-muted);">${esc(i.model||'—')}</td>
+      <td>${esc(i.dvt||'')}</td>
+      <td>${i.nhom?`<span class="pill pill-blue">${esc(i.nhom)}</span>`:'<span style="color:var(--text-faint)">—</span>'}</td>
+      <td class="right">${i.tonToiThieu?fmtNum(i.tonToiThieu):'—'}</td>
+      <td style="max-width:220px;color:var(--text-muted);">${esc(i.ghiChu||'')}</td>
+      <td class="center nowrap">
+        <button class="icon-btn" title="Sửa" onclick="openMaHangForm('${i.id}')">✎</button>
+        <button class="icon-btn danger" title="Xóa" onclick="deleteMaHang('${i.id}')">🗑</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+document.getElementById('mh-search').addEventListener('input', renderMaHang);
+document.getElementById('btn-add-mahang').addEventListener('click', ()=>openMaHangForm());
+
+function openMaHangForm(id){
+  const editing = id ? state.items.find(i=>i.id===id) : null;
+  const groupOpts = distinctGroups().map(g=>`<option value="${esc(g)}">`).join('');
+  const unitOpts = commonUnits().map(u=>`<option value="${esc(u)}">`).join('');
+  openModal(`
+    <div class="modal-head"><h3>${editing?'Sửa mã hàng':'Thêm mã hàng mới'}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label>Mã hàng *</label>
+          <input id="f-ma" type="text" value="${editing?esc(editing.ma):''}" placeholder="VD: VT-0001">
+        </div>
+        <div class="form-group"><label>Tên hàng *</label>
+          <input id="f-ten" type="text" value="${editing?esc(editing.ten):''}" placeholder="VD: Dây buộc kén">
+        </div>
+        <div class="form-group full"><label>Model / Thông số kỹ thuật <span class="hint">(không bắt buộc)</span></label>
+          <input id="f-model" type="text" value="${editing?esc(editing.model||''):''}" placeholder="VD: Bosch AdvancedAquatak 140 - 2100W - 140 bar">
+        </div>
+        <div class="form-group"><label>Đơn vị tính</label>
+          <input id="f-dvt" list="dl-units" type="text" value="${editing?esc(editing.dvt||''):''}" placeholder="VD: Kg, Cái, Cuộn...">
+          <datalist id="dl-units">${unitOpts}</datalist>
+        </div>
+        <div class="form-group"><label>Nhóm vật tư</label>
+          <input id="f-nhom" list="dl-groups" type="text" value="${editing?esc(editing.nhom||''):''}" placeholder="VD: Nguyên liệu, Bao bì...">
+          <datalist id="dl-groups">${groupOpts}</datalist>
+        </div>
+        <div class="form-group"><label>Tồn kho tối thiểu <span class="hint">(để cảnh báo)</span></label>
+          <input id="f-min" type="number" min="0" step="any" value="${editing&&editing.tonToiThieu?editing.tonToiThieu:''}" placeholder="0">
+        </div>
+        <div class="form-group full"><label>Ghi chú</label>
+          <textarea id="f-note" placeholder="Ghi chú thêm (không bắt buộc)">${editing?esc(editing.ghiChu||''):''}</textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Hủy</button>
+      <button class="btn btn-primary" onclick="saveMaHang(${editing?`'${editing.id}'`:'null'})">Lưu mã hàng</button>
+    </div>
+  `);
+  document.getElementById('f-ma').focus();
+}
+function saveMaHang(id){
+  const ma = document.getElementById('f-ma').value.trim();
+  const ten = document.getElementById('f-ten').value.trim();
+  const model = document.getElementById('f-model').value.trim();
+  const dvt = document.getElementById('f-dvt').value.trim();
+  const nhom = document.getElementById('f-nhom').value.trim();
+  const min = document.getElementById('f-min').value;
+  const ghiChu = document.getElementById('f-note').value.trim();
+  if(!ma || !ten){ toast('Vui lòng nhập Mã hàng và Tên hàng', 'error'); return; }
+  const dup = state.items.find(i => i.ma.toLowerCase()===ma.toLowerCase() && i.id!==id);
+  if(dup){ toast('Mã hàng này đã tồn tại, vui lòng dùng mã khác', 'error'); return; }
+  if(id){
+    const item = state.items.find(i=>i.id===id);
+    const oldMa = item.ma;
+    Object.assign(item, {ma, ten, model, dvt, nhom, tonToiThieu: min?Number(min):null, ghiChu});
+    if(oldMa !== ma){
+      for(const k in state.stock){ if(state.stock[k][oldMa]!==undefined){ state.stock[k][ma]=state.stock[k][oldMa]; delete state.stock[k][oldMa]; } }
+      saveKey('stock');
+      [...state.inbound, ...state.outbound].forEach(p=>{ p.items.forEach(r=>{ if(r.maHang===oldMa) r.maHang=ma; }); });
+      saveKey('inbound'); saveKey('outbound');
+    }
+    toast('Đã cập nhật mã hàng');
+  }else{
+    state.items.push({id: genId(), ma, ten, model, dvt, nhom, tonToiThieu: min?Number(min):null, ghiChu, createdAt: Date.now()});
+    toast('Đã thêm mã hàng mới', 'success');
+  }
+  saveKey('items');
+  closeModal();
+  refreshAll();
+}
+function deleteMaHang(id){
+  const item = state.items.find(i=>i.id===id);
+  if(!item) return;
+  const used = [...state.inbound, ...state.outbound].some(p=>p.items.some(r=>r.maHang===item.ma));
+  if(used){ toast('Không thể xóa: mã hàng đã phát sinh giao dịch nhập/xuất', 'error'); return; }
+  if(totalStockOfItem(item.ma) > 0){ toast('Không thể xóa: mã hàng đang còn tồn kho', 'error'); return; }
+  if(!confirm(`Xóa mã hàng "${item.ma} - ${item.ten}"?`)) return;
+  state.items = state.items.filter(i=>i.id!==id);
+  saveKey('items');
+  toast('Đã xóa mã hàng');
+  refreshAll();
+}
+
+/* =====================================================================
+   MODULE 2: KHO
+===================================================================== */
+function renderKho(){
+  const tbody = document.getElementById('kho-tbody');
+  if(state.warehouses.length===0){
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="5">Chưa có kho nào.<br>Nhấn "+ Thêm kho" để khai báo kho / địa điểm lưu trữ đầu tiên.</td></tr>`;
+  }else{
+    tbody.innerHTML = state.warehouses.map(k=>`
+      <tr>
+        <td><span class="tag-code">${esc(k.ma)}</span></td>
+        <td>${esc(k.ten)}</td>
+        <td>${esc(k.diaChi||'')}</td>
+        <td style="color:var(--text-muted);">${esc(k.ghiChu||'')}</td>
+        <td class="center nowrap">
+          <button class="icon-btn" title="Sửa" onclick="openKhoForm('${k.id}')">✎</button>
+          <button class="icon-btn danger" title="Xóa" onclick="deleteKho('${k.id}')">🗑</button>
+        </td>
+      </tr>`).join('');
+  }
+  fillWarehouseSelects();
+  renderKhoOrphanSection();
+}
+function findOrphanKhoRefs(){
+  const validMa = new Set(state.warehouses.map(k=>k.ma));
+  const orphanMap = {};
+  state.inbound.forEach(p=>{ if(p.maKho && !validMa.has(p.maKho)) orphanMap[p.maKho] = (orphanMap[p.maKho]||0)+1; });
+  state.outbound.forEach(p=>{
+    if(p.maKhoXuat && !validMa.has(p.maKhoXuat)) orphanMap[p.maKhoXuat] = (orphanMap[p.maKhoXuat]||0)+1;
+    if(p.maKhoNhan && !validMa.has(p.maKhoNhan)) orphanMap[p.maKhoNhan] = (orphanMap[p.maKhoNhan]||0)+1;
+  });
+  return orphanMap;
+}
+function renderKhoOrphanSection(){
+  const box = document.getElementById('kho-orphan-section');
+  const orphanMap = findOrphanKhoRefs();
+  const orphanCodes = Object.keys(orphanMap);
+  if(orphanCodes.length===0){ box.innerHTML = ''; return; }
+  const khoOpts = state.warehouses.map(k=>`<option value="${esc(k.ma)}">${esc(k.ma)} — ${esc(k.ten)}</option>`).join('');
+  box.innerHTML = `
+    <div class="card">
+      <div class="card-head"><div class="section-title" style="margin:0;">⚠️ Mã kho bị lệch trong lịch sử phiếu</div></div>
+      <div class="card-body">
+        <div class="help-banner warn-banner">Các mã kho dưới đây từng được dùng trong phiếu nhập/xuất nhưng hiện không còn tồn tại trong danh sách kho (thường do đã đổi/xóa mã kho trước đây). Chọn kho hiện tại tương ứng để gán lại — thao tác này CHỈ đổi nhãn mã kho trên phiếu, KHÔNG thay đổi số lượng tồn kho.</div>
+        <table>
+          <thead><tr><th>Mã kho cũ</th><th class="right">Số phiếu bị ảnh hưởng</th><th>Gán lại thành kho</th><th class="center">Thao tác</th></tr></thead>
+          <tbody>
+            ${orphanCodes.map(code=>`
+              <tr>
+                <td><span class="tag-code" style="color:var(--danger);">${esc(code)}</span></td>
+                <td class="right">${orphanMap[code]}</td>
+                <td><select id="orphan-select-${esc(code).replace(/[^a-zA-Z0-9]/g,'_')}"><option value="">— Chọn kho —</option>${khoOpts}</select></td>
+                <td class="center"><button class="btn btn-primary btn-sm" onclick="reassignOrphanKho('${esc(code).replace(/'/g,"\\'")}', document.getElementById('orphan-select-${esc(code).replace(/[^a-zA-Z0-9]/g,'_')}').value)">Đồng bộ</button></td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+function reassignOrphanKho(oldMa, newMa){
+  if(!newMa){ toast('Vui lòng chọn kho để gán lại', 'error'); return; }
+  if(!confirm(`Gán lại toàn bộ phiếu đang ghi mã kho "${oldMa}" sang kho "${newMa}"?\n\nThao tác này CHỈ đổi nhãn mã kho trên phiếu, KHÔNG thay đổi số lượng tồn kho hiện có.`)) return;
+  let count = 0;
+  state.inbound.forEach(p=>{ if(p.maKho===oldMa){ p.maKho=newMa; count++; } });
+  state.outbound.forEach(p=>{
+    if(p.maKhoXuat===oldMa){ p.maKhoXuat=newMa; count++; }
+    if(p.maKhoNhan===oldMa){ p.maKhoNhan=newMa; count++; }
+  });
+  saveKey('inbound'); saveKey('outbound');
+  toast(`Đã đồng bộ ${count} phiếu từ mã kho "${oldMa}" sang "${newMa}"`, 'success');
+  refreshAll();
+}
+document.getElementById('btn-add-kho').addEventListener('click', ()=>openKhoForm());
+function openKhoForm(id){
+  const editing = id ? state.warehouses.find(k=>k.id===id) : null;
+  openModal(`
+    <div class="modal-head"><h3>${editing?'Sửa kho':'Thêm kho mới'}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label>Mã kho *</label><input id="f-kma" type="text" value="${editing?esc(editing.ma):''}" placeholder="VD: KHO-01"></div>
+        <div class="form-group"><label>Tên kho *</label><input id="f-kten" type="text" value="${editing?esc(editing.ten):''}" placeholder="VD: Kho nguyên liệu chính"></div>
+        <div class="form-group full"><label>Địa chỉ</label><input id="f-kdc" type="text" value="${editing?esc(editing.diaChi||''):''}" placeholder="VD: Thôn 2, xã..."></div>
+        <div class="form-group full"><label>Ghi chú</label><textarea id="f-kgc" placeholder="Ghi chú thêm">${editing?esc(editing.ghiChu||''):''}</textarea></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Hủy</button>
+      <button class="btn btn-primary" onclick="saveKho(${editing?`'${editing.id}'`:'null'})">Lưu kho</button>
+    </div>
+  `);
+  document.getElementById('f-kma').focus();
+}
+function saveKho(id){
+  const ma = document.getElementById('f-kma').value.trim();
+  const ten = document.getElementById('f-kten').value.trim();
+  const diaChi = document.getElementById('f-kdc').value.trim();
+  const ghiChu = document.getElementById('f-kgc').value.trim();
+  if(!ma || !ten){ toast('Vui lòng nhập Mã kho và Tên kho', 'error'); return; }
+  const dup = state.warehouses.find(k=>k.ma.toLowerCase()===ma.toLowerCase() && k.id!==id);
+  if(dup){ toast('Mã kho này đã tồn tại', 'error'); return; }
+  if(id){
+    const k = state.warehouses.find(w=>w.id===id);
+    const oldMa = k.ma;
+    Object.assign(k, {ma, ten, diaChi, ghiChu});
+    if(oldMa!==ma){
+      if(state.stock[oldMa]){ state.stock[ma]=state.stock[oldMa]; delete state.stock[oldMa]; }
+      saveKey('stock');
+      state.inbound.forEach(p=>{ if(p.maKho===oldMa) p.maKho=ma; });
+      state.outbound.forEach(p=>{
+        if(p.maKhoXuat===oldMa) p.maKhoXuat=ma;
+        if(p.maKhoNhan===oldMa) p.maKhoNhan=ma;
+      });
+      saveKey('inbound'); saveKey('outbound');
+    }
+    toast('Đã cập nhật kho');
+  }else{
+    state.warehouses.push({id: genId(), ma, ten, diaChi, ghiChu});
+    toast('Đã thêm kho mới', 'success');
+  }
+  saveKey('warehouses');
+  closeModal();
+  refreshAll();
+}
+function deleteKho(id){
+  const k = state.warehouses.find(w=>w.id===id);
+  if(!k) return;
+  const used = [...state.inbound, ...state.outbound].some(p => p.maKho===k.ma || p.maKhoXuat===k.ma || p.maKhoNhan===k.ma);
+  if(used){ toast('Không thể xóa: kho đã phát sinh giao dịch', 'error'); return; }
+  const hasStock = state.stock[k.ma] && Object.values(state.stock[k.ma]).some(v=>v>0);
+  if(hasStock){ toast('Không thể xóa: kho đang còn tồn vật tư', 'error'); return; }
+  if(!confirm(`Xóa kho "${k.ma} - ${k.ten}"?`)) return;
+  state.warehouses = state.warehouses.filter(w=>w.id!==id);
+  saveKey('warehouses');
+  toast('Đã xóa kho');
+  refreshAll();
+}
+function fillWarehouseSelects(){
+  const optsWithCode = state.warehouses.map(k=>`<option value="${esc(k.ma)}">${esc(k.ma)} — ${esc(k.ten)}</option>`).join('');
+  const optsNameOnly = state.warehouses.map(k=>`<option value="${esc(k.ma)}">${esc(k.ten)}</option>`).join('');
+  ['tk-filter-kho'].forEach(id=>{
+    const sel = document.getElementById(id);
+    const cur = sel.value;
+    sel.innerHTML = `<option value="">Tất cả kho</option>` + optsNameOnly;
+    if([...sel.options].some(o=>o.value===cur)) sel.value = cur;
+  });
+  ['nk-filter-kho','xk-filter-kho','ls-filter-kho'].forEach(id=>{
+    const sel = document.getElementById(id);
+    const cur = sel.value;
+    sel.innerHTML = `<option value="">Tất cả kho</option>` + optsWithCode;
+    if([...sel.options].some(o=>o.value===cur)) sel.value = cur;
+  });
+}
+
+/* =====================================================================
+   MODULE: NHÀ CUNG CẤP
+===================================================================== */
+function renderNhaCungCap(){
+  const tbody = document.getElementById('nhacungcap-tbody');
+  const q = (document.getElementById('ncc-search').value||'').trim().toLowerCase();
+  let list = state.suppliers.slice().sort((a,b)=>a.ten.localeCompare(b.ten));
+  if(q) list = list.filter(s=>(s.ten+' '+(s.nguoiLienHe||'')+' '+(s.sdt||'')).toLowerCase().includes(q));
+  if(list.length===0){
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="6">Chưa có nhà cung cấp nào.<br>Nhấn "+ Thêm nhà cung cấp" để bắt đầu.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map(s=>`
+    <tr>
+      <td><b>${esc(s.ten)}</b></td>
+      <td style="color:var(--text-muted);">${esc(s.diaChi||'—')}</td>
+      <td>${s.loaiHang?`<span class="pill pill-blue">${esc(s.loaiHang)}</span>`:'—'}</td>
+      <td>${esc(s.nguoiLienHe||'—')}</td>
+      <td>${esc(s.sdt||'—')}</td>
+      <td class="center nowrap">
+        <button class="icon-btn" title="Sửa" onclick="openNhaCungCapForm('${s.id}')">✎</button>
+        <button class="icon-btn danger" title="Xóa" onclick="deleteNhaCungCap('${s.id}')">🗑</button>
+      </td>
+    </tr>`).join('');
+}
+document.getElementById('ncc-search').addEventListener('input', renderNhaCungCap);
+document.getElementById('btn-add-nhacungcap').addEventListener('click', ()=>openNhaCungCapForm());
+function openNhaCungCapForm(id){
+  const editing = id ? state.suppliers.find(s=>s.id===id) : null;
+  openModal(`
+    <div class="modal-head"><h3>${editing?'Sửa nhà cung cấp':'Thêm nhà cung cấp'}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full"><label>Tên nhà cung cấp *</label><input id="f-nccten" type="text" value="${editing?esc(editing.ten):''}" placeholder="VD: Công ty TNHH Hồng Hà"></div>
+        <div class="form-group full"><label>Địa chỉ</label><input id="f-nccdc" type="text" value="${editing?esc(editing.diaChi||''):''}" placeholder="Địa chỉ nhà cung cấp"></div>
+        <div class="form-group"><label>Loại hàng cung cấp</label><input id="f-nccloai" type="text" value="${editing?esc(editing.loaiHang||''):''}" placeholder="VD: Vật tư điện, Bao bì..."></div>
+        <div class="form-group"><label>Người liên hệ</label><input id="f-nccnlh" type="text" value="${editing?esc(editing.nguoiLienHe||''):''}" placeholder="Tên người liên hệ"></div>
+        <div class="form-group"><label>Số điện thoại</label><input id="f-nccsdt" type="text" value="${editing?esc(editing.sdt||''):''}" placeholder="Số điện thoại liên hệ"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Hủy</button>
+      <button class="btn btn-primary" onclick="saveNhaCungCap(${editing?`'${editing.id}'`:'null'})">Lưu nhà cung cấp</button>
+    </div>
+  `);
+  document.getElementById('f-nccten').focus();
+}
+function saveNhaCungCap(id){
+  const ten = document.getElementById('f-nccten').value.trim();
+  const diaChi = document.getElementById('f-nccdc').value.trim();
+  const loaiHang = document.getElementById('f-nccloai').value.trim();
+  const nguoiLienHe = document.getElementById('f-nccnlh').value.trim();
+  const sdt = document.getElementById('f-nccsdt').value.trim();
+  if(!ten){ toast('Vui lòng nhập Tên nhà cung cấp', 'error'); return; }
+  if(id){
+    Object.assign(state.suppliers.find(s=>s.id===id), {ten, diaChi, loaiHang, nguoiLienHe, sdt});
+    toast('Đã cập nhật nhà cung cấp');
+  }else{
+    state.suppliers.push({id: genId(), ten, diaChi, loaiHang, nguoiLienHe, sdt});
+    toast('Đã thêm nhà cung cấp mới', 'success');
+  }
+  saveKey('suppliers');
+  closeModal();
+  renderNhaCungCap();
+}
+function deleteNhaCungCap(id){
+  const s = state.suppliers.find(x=>x.id===id);
+  if(!s) return;
+  if(!confirm(`Xóa nhà cung cấp "${s.ten}"? (Các phiếu nhập cũ đã ghi nhận tên nhà cung cấp sẽ không bị ảnh hưởng)`)) return;
+  state.suppliers = state.suppliers.filter(x=>x.id!==id);
+  saveKey('suppliers');
+  toast('Đã xóa nhà cung cấp');
+  renderNhaCungCap();
+}
+function supplierNameOptions(){
+  return state.suppliers.slice().sort((a,b)=>a.ten.localeCompare(b.ten)).map(s=>`<option value="${esc(s.ten)}">`).join('');
+}
+
+/* =====================================================================
+   MODULE: NGƯỜI NHẬN HÀNG
+===================================================================== */
+function renderNguoiNhan(){
+  const tbody = document.getElementById('nguoinhan-tbody');
+  const q = (document.getElementById('nn-search').value||'').trim().toLowerCase();
+  let list = state.recipients.slice().sort((a,b)=>a.hoTen.localeCompare(b.hoTen));
+  if(q) list = list.filter(r=>(r.hoTen+' '+(r.boPhan||'')+' '+(r.sdt||'')).toLowerCase().includes(q));
+  if(list.length===0){
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="4">Chưa có người nhận hàng nào.<br>Nhấn "+ Thêm người nhận hàng" để bắt đầu.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map(r=>`
+    <tr>
+      <td><b>${esc(r.hoTen)}</b></td>
+      <td>${esc(r.sdt||'—')}</td>
+      <td>${r.boPhan?`<span class="pill pill-blue">${esc(r.boPhan)}</span>`:'—'}</td>
+      <td class="center nowrap">
+        <button class="icon-btn" title="Sửa" onclick="openNguoiNhanForm('${r.id}')">✎</button>
+        <button class="icon-btn danger" title="Xóa" onclick="deleteNguoiNhan('${r.id}')">🗑</button>
+      </td>
+    </tr>`).join('');
+}
+document.getElementById('nn-search').addEventListener('input', renderNguoiNhan);
+document.getElementById('btn-add-nguoinhan').addEventListener('click', ()=>openNguoiNhanForm());
+function openNguoiNhanForm(id){
+  const editing = id ? state.recipients.find(r=>r.id===id) : null;
+  openModal(`
+    <div class="modal-head"><h3>${editing?'Sửa người nhận hàng':'Thêm người nhận hàng'}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label>Họ và tên *</label><input id="f-nnten" type="text" value="${editing?esc(editing.hoTen):''}" placeholder="VD: Nguyễn Văn A"></div>
+        <div class="form-group"><label>Số điện thoại</label><input id="f-nnsdt" type="text" value="${editing?esc(editing.sdt||''):''}" placeholder="Số điện thoại"></div>
+        <div class="form-group full"><label>Bộ phận</label><input id="f-nnbp" type="text" value="${editing?esc(editing.boPhan||''):''}" placeholder="VD: Nuôi tằm - Phòng 2"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Hủy</button>
+      <button class="btn btn-primary" onclick="saveNguoiNhan(${editing?`'${editing.id}'`:'null'})">Lưu người nhận hàng</button>
+    </div>
+  `);
+  document.getElementById('f-nnten').focus();
+}
+function saveNguoiNhan(id){
+  const hoTen = document.getElementById('f-nnten').value.trim();
+  const sdt = document.getElementById('f-nnsdt').value.trim();
+  const boPhan = document.getElementById('f-nnbp').value.trim();
+  if(!hoTen){ toast('Vui lòng nhập Họ và tên', 'error'); return; }
+  if(id){
+    Object.assign(state.recipients.find(r=>r.id===id), {hoTen, sdt, boPhan});
+    toast('Đã cập nhật người nhận hàng');
+  }else{
+    state.recipients.push({id: genId(), hoTen, sdt, boPhan});
+    toast('Đã thêm người nhận hàng mới', 'success');
+  }
+  saveKey('recipients');
+  closeModal();
+  renderNguoiNhan();
+}
+function deleteNguoiNhan(id){
+  const r = state.recipients.find(x=>x.id===id);
+  if(!r) return;
+  if(!confirm(`Xóa người nhận hàng "${r.hoTen}"? (Các phiếu xuất cũ sẽ không bị ảnh hưởng)`)) return;
+  state.recipients = state.recipients.filter(x=>x.id!==id);
+  saveKey('recipients');
+  toast('Đã xóa người nhận hàng');
+  renderNguoiNhan();
+}
+function recipientNameOptions(){
+  return state.recipients.slice().sort((a,b)=>a.hoTen.localeCompare(b.hoTen)).map(r=>`<option value="${esc(r.hoTen)}">`).join('');
+}
+function autofillBoPhanFromRecipient(input){
+  const val = input.value.trim();
+  const rec = state.recipients.find(r=>r.hoTen.toLowerCase()===val.toLowerCase());
+  const boPhanInput = document.getElementById('f-bophan');
+  if(rec && boPhanInput && !boPhanInput.value.trim()){
+    boPhanInput.value = rec.boPhan || '';
+  }
+}
+
+/* =====================================================================
+   MODULE: NGƯỜI SỬ DỤNG (chỉ Admin)
+===================================================================== */
+function renderNguoiDung(){
+  const tbody = document.getElementById('nguoidung-tbody');
+  const q = (document.getElementById('nd-search').value||'').trim().toLowerCase();
+  let list = state.users.slice().sort((a,b)=>(a.hoTen||'').localeCompare(b.hoTen||''));
+  if(q) list = list.filter(u=>((u.hoTen||'')+' '+(u.email||'')).toLowerCase().includes(q));
+  if(list.length===0){
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="6">Chưa có người sử dụng nào.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map(u=>{
+    const roleClass = u.quyen==='admin' ? 'pill-red' : u.quyen==='quanly' ? 'pill-amber' : 'pill-blue';
+    return `<tr>
+      <td><b>${esc(u.hoTen||u.email)}</b>${currentUser&&currentUser.uid===u.uid?' <span class="pill pill-gray">Bạn</span>':''}</td>
+      <td><span class="tag-code">${esc(u.email||'')}</span></td>
+      <td><span class="pill ${roleClass}">${esc(ROLE_LABELS[u.quyen]||u.quyen)}</span></td>
+      <td>${esc(u.boPhan||'—')}</td>
+      <td>${esc(u.sdt||'—')}</td>
+      <td class="center nowrap">
+        <button class="icon-btn" title="Sửa" onclick="openNguoiDungForm('${u.uid}')">✎</button>
+        <button class="icon-btn danger" title="Xóa" onclick="deleteNguoiDung('${u.uid}')">🗑</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+document.getElementById('nd-search').addEventListener('input', renderNguoiDung);
+document.getElementById('btn-add-nguoidung').addEventListener('click', ()=>openNguoiDungForm());
+function openNguoiDungForm(uid){
+  const editing = uid ? state.users.find(u=>u.uid===uid) : null;
+  openModal(`
+    <div class="modal-head"><h3>${editing?'Sửa người sử dụng':'Thêm người sử dụng'}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      ${editing?'':'<div class="help-banner">Có thể gõ email thật, hoặc chỉ gõ một tên ngắn (VD: nv1) nếu nhân viên không có email — hệ thống sẽ tự ghép thành email nội bộ hợp lệ để đăng nhập.</div>'}
+      <div class="form-grid">
+        <div class="form-group"><label>Họ và tên *</label><input id="f-ndten" type="text" value="${editing?esc(editing.hoTen||''):''}" placeholder="VD: Trần Thị B"></div>
+        <div class="form-group"><label>Số điện thoại</label><input id="f-ndsdt" type="text" value="${editing?esc(editing.sdt||''):''}" placeholder="Số điện thoại"></div>
+        <div class="form-group"><label>${editing?'Email':'Email / Tên đăng nhập *'}</label><input id="f-ndemail" type="text" value="${editing?esc(editing.email||''):''}" placeholder="VD: [email protected] hoặc nv1" ${editing?'disabled':''}></div>
+        <div class="form-group"><label>Quyền truy cập *</label>
+          <select id="f-ndquyen">
+            <option value="admin" ${editing&&editing.quyen==='admin'?'selected':''}>Admin</option>
+            <option value="quanly" ${editing&&editing.quyen==='quanly'?'selected':''}>Quản lý</option>
+            <option value="nhanvien" ${(!editing||editing.quyen==='nhanvien')?'selected':''}>Nhân viên</option>
+          </select>
+        </div>
+        <div class="form-group full"><label>Bộ phận</label><input id="f-ndbp" type="text" value="${editing?esc(editing.boPhan||''):''}" placeholder="VD: Kho tổng hợp"></div>
+        ${editing
+          ? `<div class="form-group full"><label>Mật khẩu</label><button type="button" class="btn btn-ghost btn-sm" onclick="guiDatLaiMatKhau('${esc(editing.email||'')}')">✉️ Gửi email đặt lại mật khẩu</button></div>`
+          : `<div class="form-group full"><label>Mật khẩu *</label><input id="f-ndmk" type="password" placeholder="Tối thiểu 6 ký tự" autocomplete="new-password"></div>`}
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Hủy</button>
+      <button class="btn btn-primary" id="btn-save-nguoidung" onclick="saveNguoiDung(${editing?`'${editing.uid}'`:'null'})">Lưu người sử dụng</button>
+    </div>
+  `);
+  document.getElementById('f-ndten').focus();
+}
+function guiDatLaiMatKhau(email){
+  if(!email) return;
+  auth.sendPasswordResetEmail(email).then(()=>{
+    toast('Đã gửi email đặt lại mật khẩu tới ' + email, 'success');
+  }).catch(err=>{
+    toast(mapFirebaseAuthError(err), 'error');
+  });
+}
+async function saveNguoiDung(uid){
+  const hoTen = document.getElementById('f-ndten').value.trim();
+  const sdt = document.getElementById('f-ndsdt').value.trim();
+  const quyen = document.getElementById('f-ndquyen').value;
+  const boPhan = document.getElementById('f-ndbp').value.trim();
+  if(!hoTen){ toast('Vui lòng nhập Họ và tên', 'error'); return; }
+  const btn = document.getElementById('btn-save-nguoidung');
+
+  if(uid){
+    const u = state.users.find(x=>x.uid===uid);
+    if(u.quyen==='admin' && quyen!=='admin'){
+      const adminCount = state.users.filter(x=>x.quyen==='admin').length;
+      if(adminCount<=1){ toast('Phải có ít nhất 1 tài khoản Admin trong hệ thống', 'error'); return; }
+    }
+    await db.ref('userProfiles/'+uid).update({ hoTen, sdt, quyen, boPhan });
+    if(currentUser && currentUser.uid===uid){
+      currentUser = { ...currentUser, hoTen, sdt, quyen, boPhan };
+      renderUserBadge();
+    }
+    toast('Đã cập nhật người sử dụng');
+    closeModal();
+  }else{
+    const email = normalizeEmailInput(document.getElementById('f-ndemail').value);
+    const matKhau = document.getElementById('f-ndmk').value;
+    if(!email){ toast('Vui lòng nhập email / tên đăng nhập', 'error'); return; }
+    if(!matKhau || matKhau.length<6){ toast('Mật khẩu cần tối thiểu 6 ký tự', 'error'); return; }
+    btn.disabled = true; btn.textContent = 'Đang tạo...';
+    try{
+      const newUid = await createFirebaseUserViaSecondaryApp(email, matKhau);
+      await db.ref('userProfiles/'+newUid).set({ hoTen, sdt, quyen, boPhan, email });
+      toast('Đã thêm người sử dụng mới', 'success');
+      closeModal();
+    }catch(err){
+      toast(mapFirebaseAuthError(err), 'error');
+      btn.disabled = false; btn.textContent = 'Lưu người sử dụng';
+    }
+  }
+}
+/* Tạo tài khoản Firebase Authentication cho người dùng MỚI bằng một app Firebase phụ (secondary),
+   để không làm đăng xuất mất phiên của Admin đang thao tác (hạn chế cố hữu của Firebase Auth
+   phía client: tạo user mới bằng app chính sẽ tự động đăng nhập luôn vào user đó). */
+async function createFirebaseUserViaSecondaryApp(email, password){
+  const secondaryApp = firebase.initializeApp(firebaseConfig, 'Secondary_'+Date.now());
+  try{
+    const cred = await secondaryApp.auth().createUserWithEmailAndPassword(email, password);
+    const newUid = cred.user.uid;
+    await secondaryApp.auth().signOut();
+    return newUid;
+  }finally{
+    await secondaryApp.delete();
+  }
+}
+function deleteNguoiDung(uid){
+  const u = state.users.find(x=>x.uid===uid);
+  if(!u) return;
+  if(currentUser && currentUser.uid===uid){ toast('Không thể xóa tài khoản đang đăng nhập', 'error'); return; }
+  if(u.quyen==='admin'){
+    const adminCount = state.users.filter(x=>x.quyen==='admin').length;
+    if(adminCount<=1){ toast('Phải có ít nhất 1 tài khoản Admin trong hệ thống', 'error'); return; }
+  }
+  if(!confirm(`Xóa người sử dụng "${u.hoTen||u.email}"?\n\nLưu ý: thao tác này chỉ thu hồi quyền truy cập ứng dụng (xóa hồ sơ), tài khoản đăng nhập Firebase gốc vẫn tồn tại và cần xóa thủ công trong Firebase Console nếu muốn xóa hẳn.`)) return;
+  db.ref('userProfiles/'+uid).remove();
+  toast('Đã thu hồi quyền truy cập của người sử dụng này');
+}
+
+/* =====================================================================
+   ITEM ROW EDITOR (shared by Nhập kho / Xuất kho sản xuất & chuyển kho)
+===================================================================== */
+function itemDatalistOptionsHtml(){
+  return state.items.slice().sort((a,b)=>a.ma.localeCompare(b.ma))
+    .map(i=>`<option value="${esc(i.ma)} — ${esc(i.ten)}${i.model?' ('+esc(i.model)+')':''}">`).join('');
+}
+function resolveMaHangFromInputValue(val){
+  val = (val||'').trim();
+  if(!val) return null;
+  const idx = val.indexOf(' — ');
+  if(idx>-1){
+    const maPart = val.slice(0, idx);
+    const item = state.items.find(i=>i.ma===maPart);
+    if(item) return item;
+  }
+  let item = state.items.find(i=>i.ma.toLowerCase()===val.toLowerCase());
+  if(item) return item;
+  item = state.items.find(i=>i.ten.toLowerCase()===val.toLowerCase());
+  return item || null;
+}
+function buildItemRow(rowData, withPrice){
+  const id = genId();
+  const ma = rowData ? rowData.maHang : '';
+  const sl = rowData ? rowData.soLuong : '';
+  const dg = rowData && withPrice ? (rowData.donGia||'') : '';
+  const item = ma ? state.items.find(i=>i.ma===ma) : null;
+  const displayVal = item ? `${item.ma} — ${item.ten}${item.model?' ('+item.model+')':''}` : ma;
+  return `<tr data-row-id="${id}">
+    <td><input type="text" class="row-mahang" list="dl-item-catalog" value="${esc(displayVal)}" placeholder="Gõ mã hoặc tên để tìm..." oninput="onRowItemChange(this)"></td>
+    <td class="row-dvt" style="color:var(--text-muted);">${esc(item?(item.dvt||''):'')}</td>
+    <td><input type="number" class="row-soluong" min="0" step="any" value="${sl}" oninput="recalcRowTotal(this)"></td>
+    ${withPrice ? `<td><input type="number" class="row-dongia" min="0" step="any" value="${dg}" oninput="recalcRowTotal(this)"></td>
+    <td class="row-thanhtien right">${dg&&sl?fmtMoney(dg*sl):'0 đ'}</td>` : ''}
+    <td><button type="button" class="row-remove" onclick="this.closest('tr').remove(); ${withPrice?'recalcGrandTotal();':''}">✕</button></td>
+  </tr>`;
+}
+function onRowItemChange(input){
+  const tr = input.closest('tr');
+  const item = resolveMaHangFromInputValue(input.value);
+  tr.querySelector('.row-dvt').textContent = item ? (item.dvt||'') : '';
+}
+function recalcRowTotal(input){
+  const tr = input.closest('tr');
+  const sl = Number(tr.querySelector('.row-soluong').value)||0;
+  const dgInput = tr.querySelector('.row-dongia');
+  if(dgInput){
+    const dg = Number(dgInput.value)||0;
+    tr.querySelector('.row-thanhtien').textContent = fmtMoney(sl*dg);
+    recalcGrandTotal();
+  }
+}
+function recalcGrandTotal(){
+  const el = document.getElementById('grand-total');
+  if(!el) return;
+  let total = 0;
+  document.querySelectorAll('#items-editor-body tr').forEach(tr=>{
+    const sl = Number(tr.querySelector('.row-soluong').value)||0;
+    const dgInput = tr.querySelector('.row-dongia');
+    if(dgInput) total += sl * (Number(dgInput.value)||0);
+  });
+  el.textContent = fmtMoney(total);
+}
+function addItemRow(withPrice){
+  document.getElementById('items-editor-body').insertAdjacentHTML('beforeend', buildItemRow(null, withPrice));
+}
+function collectItemRows(withPrice){
+  const rows = [];
+  document.querySelectorAll('#items-editor-body tr').forEach(tr=>{
+    const item = resolveMaHangFromInputValue(tr.querySelector('.row-mahang').value);
+    const sl = Number(tr.querySelector('.row-soluong').value)||0;
+    const dgInput = tr.querySelector('.row-dongia');
+    const dg = dgInput ? (Number(dgInput.value)||0) : 0;
+    if(item && sl>0){
+      rows.push({maHang: item.ma, ten: item.ten, dvt: item.dvt||'', soLuong: sl, donGia: withPrice?dg:0});
+    }
+  });
+  return rows;
+}
+
+/* =====================================================================
+   MODULE 3: NHẬP KHO
+===================================================================== */
+const NK_PAGE_SIZE = 20;
+let nkPage = 1;
+let nkExpanded = new Set();
+function nkGoToPage(delta){ nkPage += delta; renderNhap(); }
+function toggleNkExpand(id){
+  if(nkExpanded.has(id)) nkExpanded.delete(id); else nkExpanded.add(id);
+  renderNhap();
+}
+function getFilteredNhapList(){
+  const loai = document.getElementById('nk-filter-loai').value;
+  const kho = document.getElementById('nk-filter-kho').value;
+  const qVatTu = (document.getElementById('nk-search-vattu').value||'').trim().toLowerCase();
+  const tuNgay = document.getElementById('nk-tu-ngay').value;
+  const denNgay = document.getElementById('nk-den-ngay').value;
+  let list = state.inbound.slice().sort((a,b)=>b.createdAt-a.createdAt);
+  if(loai) list = list.filter(p=>p.loai===loai);
+  if(kho) list = list.filter(p=>p.maKho===kho);
+  if(qVatTu) list = list.filter(p=>p.items.some(r=>(r.maHang+' '+r.ten).toLowerCase().includes(qVatTu)));
+  if(tuNgay) list = list.filter(p=>p.ngay && p.ngay.slice(0,10) >= tuNgay);
+  if(denNgay) list = list.filter(p=>p.ngay && p.ngay.slice(0,10) <= denNgay);
+  return list;
+}
+function renderNhap(){
+  const tbody = document.getElementById('nhap-tbody');
+  const pagerEl = document.getElementById('nk-pagination');
+  let list = getFilteredNhapList();
+  if(list.length===0){
+    const emptyMsg = state.inbound.length===0
+      ? `Chưa có phiếu nhập kho nào.${state.warehouses.length===0?'<br><b>Lưu ý:</b> cần tạo ít nhất 1 kho trước khi nhập.':''}`
+      : 'Không có phiếu nào phù hợp với bộ lọc hiện tại.';
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="8">${emptyMsg}</td></tr>`;
+    pagerEl.innerHTML = '';
+    return;
+  }
+  const totalPages = Math.max(1, Math.ceil(list.length / NK_PAGE_SIZE));
+  if(nkPage > totalPages) nkPage = totalPages;
+  if(nkPage < 1) nkPage = 1;
+  const pageList = list.slice((nkPage-1)*NK_PAGE_SIZE, (nkPage-1)*NK_PAGE_SIZE + NK_PAGE_SIZE);
+
+  tbody.innerHTML = pageList.map(p=>{
+    const expanded = nkExpanded.has(p.id);
+    const withPrice = p.loai==='mua';
+    const mainRow = `<tr>
+      <td class="center"><button class="icon-btn" title="${expanded?'Thu gọn':'Xem chi tiết vật tư'}" onclick="toggleNkExpand('${p.id}')">${expanded?'▾':'▸'}</button></td>
+      <td><span class="tag-code">${esc(p.soPhieu)}</span></td>
+      <td class="nowrap">${fmtDate(p.ngay)}</td>
+      <td>${p.loai==='mua'?'<span class="pill pill-amber">Mua hàng</span>':'<span class="pill pill-blue">Trực tiếp</span>'}</td>
+      <td>${esc(p.maKho)}</td>
+      <td>${esc(p.nhaCungCap||'—')}</td>
+      <td class="right">${p.loai==='mua'?fmtMoney(p.tongTien):'—'}</td>
+      <td class="center nowrap">
+        <button class="icon-btn" title="Sửa" onclick="openNhapForm('${p.id}')">✎</button>
+        <button class="icon-btn" title="Xem" onclick="viewNhapDetail('${p.id}')">👁</button>
+        <button class="icon-btn" title="In phiếu nhập kho" onclick="printPhieuNhap('${p.id}')">🖨️</button>
+        <button class="icon-btn danger" title="Xóa (hoàn tác tồn kho)" onclick="deleteNhap('${p.id}')">🗑</button>
+      </td>
+    </tr>`;
+    const detailRow = !expanded ? '' : `<tr class="nk-detail-row">
+      <td></td>
+      <td colspan="7" style="background:#FAFBFC;padding:10px 14px 16px;">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead><tr>
+            <th style="font-size:10.5px;text-transform:uppercase;color:var(--text-muted);text-align:left;padding:5px 8px;border-bottom:1px solid var(--border);">Mã hàng</th>
+            <th style="font-size:10.5px;text-transform:uppercase;color:var(--text-muted);text-align:left;padding:5px 8px;border-bottom:1px solid var(--border);">Tên hàng</th>
+            <th style="font-size:10.5px;text-transform:uppercase;color:var(--text-muted);text-align:left;padding:5px 8px;border-bottom:1px solid var(--border);">ĐVT</th>
+            <th style="font-size:10.5px;text-transform:uppercase;color:var(--text-muted);text-align:right;padding:5px 8px;border-bottom:1px solid var(--border);">Số lượng</th>
+            ${withPrice?'<th style="font-size:10.5px;text-transform:uppercase;color:var(--text-muted);text-align:right;padding:5px 8px;border-bottom:1px solid var(--border);">Đơn giá</th><th style="font-size:10.5px;text-transform:uppercase;color:var(--text-muted);text-align:right;padding:5px 8px;border-bottom:1px solid var(--border);">Thành tiền</th>':''}
+          </tr></thead>
+          <tbody>
+            ${p.items.map(r=>`<tr>
+              <td style="padding:5px 8px;border-bottom:1px solid #EEF1F4;"><span class="tag-code">${esc(r.maHang)}</span></td>
+              <td style="padding:5px 8px;border-bottom:1px solid #EEF1F4;">${esc(r.ten)}</td>
+              <td style="padding:5px 8px;border-bottom:1px solid #EEF1F4;">${esc(r.dvt)}</td>
+              <td style="padding:5px 8px;border-bottom:1px solid #EEF1F4;text-align:right;">${fmtNum(r.soLuong)}</td>
+              ${withPrice?`<td style="padding:5px 8px;border-bottom:1px solid #EEF1F4;text-align:right;">${fmtMoney(r.donGia)}</td><td style="padding:5px 8px;border-bottom:1px solid #EEF1F4;text-align:right;">${fmtMoney(r.soLuong*r.donGia)}</td>`:''}
+            </tr>`).join('')}
+          </tbody>
+        </table>
+        ${p.ghiChu?`<div style="margin-top:8px;font-size:12px;color:var(--text-muted);"><b>Ghi chú:</b> ${esc(p.ghiChu)}</div>`:''}
+      </td>
+    </tr>`;
+    return mainRow + detailRow;
+  }).join('');
+
+  const fromIdx = (nkPage-1)*NK_PAGE_SIZE + 1;
+  const toIdx = (nkPage-1)*NK_PAGE_SIZE + pageList.length;
+  pagerEl.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <span style="font-size:12px;color:var(--text-muted);">Hiển thị ${fromIdx}–${toIdx} trong tổng số ${list.length} phiếu</span>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-ghost btn-sm" onclick="nkGoToPage(-1)" ${nkPage<=1?'disabled':''}>‹ Trước</button>
+        <span style="font-size:12.5px;color:var(--text-muted);">Trang ${nkPage}/${totalPages}</span>
+        <button class="btn btn-ghost btn-sm" onclick="nkGoToPage(1)" ${nkPage>=totalPages?'disabled':''}>Sau ›</button>
+      </div>
+    </div>`;
+}
+document.getElementById('nk-filter-loai').addEventListener('change', ()=>{ nkPage=1; renderNhap(); });
+document.getElementById('nk-filter-kho').addEventListener('change', ()=>{ nkPage=1; renderNhap(); });
+document.getElementById('nk-search-vattu').addEventListener('input', ()=>{ nkPage=1; renderNhap(); });
+document.getElementById('nk-tu-ngay').addEventListener('change', ()=>{ nkPage=1; renderNhap(); });
+document.getElementById('nk-den-ngay').addEventListener('change', ()=>{ nkPage=1; renderNhap(); });
+document.getElementById('btn-add-nhap').addEventListener('click', ()=>openNhapForm());
+document.getElementById('btn-export-nhap').addEventListener('click', exportNhapExcel);
+function exportNhapExcel(){
+  if(typeof XLSX === 'undefined'){ toast('Không thể tải thư viện xuất Excel (cần kết nối internet). Vui lòng thử lại.', 'error'); return; }
+  const list = getFilteredNhapList();
+  if(list.length===0){ toast('Không có dữ liệu phù hợp với bộ lọc để xuất Excel', 'error'); return; }
+  const rows = [];
+  list.slice().reverse().forEach(p=>{
+    p.items.forEach(r=>{
+      rows.push({
+        'Số phiếu': p.soPhieu,
+        'Ngày nhập': fmtDate(p.ngay),
+        'Loại nhập': p.loai==='mua'?'Mua hàng':'Trực tiếp',
+        'Kho nhập': p.maKho,
+        'Nhà cung cấp': p.nhaCungCap||'',
+        'Người thực hiện': p.nguoiTao||'',
+        'Mã hàng': r.maHang,
+        'Tên hàng': r.ten,
+        'ĐVT': r.dvt||'',
+        'Số lượng': r.soLuong,
+        'Đơn giá': p.loai==='mua' ? r.donGia : '',
+        'Thành tiền': p.loai==='mua' ? (r.soLuong*r.donGia) : '',
+        'Ghi chú': p.ghiChu||''
+      });
+    });
+  });
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [{wch:14},{wch:16},{wch:12},{wch:12},{wch:28},{wch:16},{wch:10},{wch:26},{wch:8},{wch:10},{wch:12},{wch:14},{wch:24}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Nhap kho');
+  XLSX.writeFile(wb, `nhap-kho-${todayISO()}.xlsx`);
+  toast('Đã xuất file Excel', 'success');
+}
+
+function openNhapForm(editId){
+  const editingPhieu = editId ? state.inbound.find(p=>p.id===editId) : null;
+  if(!editingPhieu){
+    if(state.warehouses.length===0){ toast('Vui lòng tạo ít nhất 1 kho trước khi nhập kho', 'error'); if(canAccess('kho')) switchView('kho'); return; }
+    if(state.items.length===0){ toast('Vui lòng khai báo mã hàng trước khi nhập kho', 'error'); if(canAccess('mahang')) switchView('mahang'); return; }
+  }
+  const orphanKho = editingPhieu && !state.warehouses.some(k=>k.ma===editingPhieu.maKho);
+  const loaiHienTai = editingPhieu ? editingPhieu.loai : 'mua';
+  const isMuaHienTai = loaiHienTai==='mua';
+  const khoOpts = (orphanKho ? `<option value="" disabled selected>— Chọn lại kho (mã gốc "${esc(editingPhieu.maKho)}" không còn tồn tại) —</option>` : '') +
+    state.warehouses.map(k=>`<option value="${esc(k.ma)}" ${editingPhieu&&editingPhieu.maKho===k.ma?'selected':''}>${esc(k.ma)} — ${esc(k.ten)}</option>`).join('');
+  const itemRowsHtml = editingPhieu ? editingPhieu.items.map(r=>buildItemRow(r, isMuaHienTai)).join('') : buildItemRow(null, true);
+  openModal(`
+    <div class="modal-head"><h3>${editingPhieu?'Sửa phiếu nhập kho':'Tạo phiếu nhập kho'}${editingPhieu?` <span class="tag-code">${esc(editingPhieu.soPhieu)}</span>`:''}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      ${orphanKho?`<div class="help-banner warn-banner">⚠️ Mã kho gốc của phiếu này ("${esc(editingPhieu.maKho)}") không còn tồn tại trong danh sách kho — có thể do đã đổi/xóa mã kho trước đây. Vui lòng chọn lại đúng kho hiện tại rồi lưu; hệ thống sẽ tự đồng bộ và chỉ áp dụng phần chênh lệch số lượng (nếu có) vào kho vừa chọn, không cộng trùng số lượng cũ.</div>`:''}
+      <div class="section-title">Loại nhập kho</div>
+      <div class="radio-group" id="nk-loai-group" style="margin-bottom:16px;">
+        <label class="radio-card ${isMuaHienTai?'selected':''}" data-val="mua">
+          <input type="radio" name="nkloai" value="mua" ${isMuaHienTai?'checked':''} style="display:none;">
+          <b>📥 Nhập kho mua hàng</b><span>Có nhà cung cấp, đơn giá, thành tiền</span>
+        </label>
+        <label class="radio-card ${!isMuaHienTai?'selected':''}" data-val="truc_tiep">
+          <input type="radio" name="nkloai" value="truc_tiep" ${!isMuaHienTai?'checked':''} style="display:none;">
+          <b>📦 Nhập kho trực tiếp</b><span>Nhập không qua mua hàng (trả lại, điều chuyển...)</span>
+        </label>
+      </div>
+      <div class="form-grid">
+        <div class="form-group"><label>Ngày nhập *</label><input id="f-ngay" type="datetime-local" value="${editingPhieu?editingPhieu.ngay:nowDateTimeLocal()}"></div>
+        <div class="form-group"><label>Kho nhập *</label><select id="f-kho">${khoOpts}</select></div>
+        <div class="form-group" id="f-ncc-wrap" style="${isMuaHienTai?'':'display:none;'}"><label>Nhà cung cấp</label><input id="f-ncc" list="dl-ncc" type="text" value="${editingPhieu?esc(editingPhieu.nhaCungCap||''):''}" placeholder="Chọn hoặc nhập tên nhà cung cấp"><datalist id="dl-ncc">${supplierNameOptions()}</datalist></div>
+        <div class="form-group"><label>Người giao hàng <span class="hint">(không bắt buộc)</span></label><input id="f-nguoigiaohang" type="text" value="${editingPhieu?esc(editingPhieu.nguoiGiaoHang||''):''}" placeholder="Họ tên người giao hàng"></div>
+        <div class="form-group nk-price-col" id="f-sohd-wrap" style="${isMuaHienTai?'':'display:none;'}"><label>Số hóa đơn <span class="hint">(không bắt buộc)</span></label><input id="f-sohoadon" type="text" value="${editingPhieu?esc(editingPhieu.soHoaDon||''):''}" placeholder="VD: HD0178"></div>
+        <div class="form-group nk-price-col" id="f-ngayhd-wrap" style="${isMuaHienTai?'':'display:none;'}"><label>Ngày hóa đơn <span class="hint">(không bắt buộc)</span></label><input id="f-ngayhoadon" type="date" value="${editingPhieu?esc(editingPhieu.ngayHoaDon||''):''}"></div>
+        <div class="form-group"><label>Người thực hiện</label><input id="f-nguoi" type="text" value="${editingPhieu?esc(editingPhieu.nguoiTao||''):esc((currentUser&&currentUser.hoTen)||state.lastUser||'')}" placeholder="Tên người tạo phiếu"></div>
+      </div>
+      <div class="section-title" style="margin-top:16px;">Danh sách vật tư</div>
+      <datalist id="dl-item-catalog">${itemDatalistOptionsHtml()}</datalist>
+      <table class="items-editor">
+        <thead><tr><th style="width:34%">Mã hàng</th><th style="width:12%">ĐVT</th><th style="width:14%">Số lượng</th><th class="nk-price-col" style="width:16%;${isMuaHienTai?'':'display:none;'}">Đơn giá</th><th class="nk-price-col" style="width:16%;${isMuaHienTai?'':'display:none;'}">Thành tiền</th><th style="width:6%"></th></tr></thead>
+        <tbody id="items-editor-body">${itemRowsHtml}</tbody>
+      </table>
+      <button type="button" class="btn btn-ghost btn-sm add-row-btn" onclick="addItemRow(${isMuaHienTai})">+ Thêm dòng</button>
+      <div class="nk-price-col" style="text-align:right;margin-top:10px;font-size:14px;${isMuaHienTai?'':'display:none;'}">Tổng tiền: <b id="grand-total" style="color:var(--primary);">0 đ</b></div>
+      <div class="form-group full" style="margin-top:14px;"><label>Ghi chú</label><textarea id="f-note" placeholder="Ghi chú thêm (không bắt buộc)">${editingPhieu?esc(editingPhieu.ghiChu||''):''}</textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Hủy</button>
+      <button class="btn btn-primary" onclick="saveNhap(${editingPhieu?`'${editingPhieu.id}'`:'null'})">${editingPhieu?'Cập nhật phiếu nhập':'Lưu phiếu nhập'}</button>
+    </div>
+  `);
+  document.getElementById('nk-loai-group').addEventListener('click', e=>{
+    const card = e.target.closest('.radio-card'); if(!card) return;
+    document.querySelectorAll('#nk-loai-group .radio-card').forEach(c=>c.classList.remove('selected'));
+    card.classList.add('selected');
+    const isMua = card.dataset.val==='mua';
+    document.getElementById('f-ncc-wrap').style.display = isMua ? '' : 'none';
+    document.querySelectorAll('.nk-price-col').forEach(el=> el.style.display = isMua ? '' : 'none');
+    document.querySelectorAll('#items-editor-body tr').forEach(tr=>{
+      const dgCell = tr.children[3], ttCell = tr.children[4];
+      if(dgCell) dgCell.style.display = isMua ? '' : 'none';
+      if(ttCell) ttCell.style.display = isMua ? '' : 'none';
+    });
+    document.querySelector('.add-row-btn').setAttribute('onclick', 'addItemRow('+isMua+')');
+  });
+  if(isMuaHienTai) recalcGrandTotal();
+}
+function saveNhap(editId){
+  const loaiEl = document.querySelector('#nk-loai-group .radio-card.selected');
+  const loai = loaiEl.dataset.val;
+  const withPrice = loai==='mua';
+  const ngay = document.getElementById('f-ngay').value;
+  const maKho = document.getElementById('f-kho').value;
+  const nhaCungCap = document.getElementById('f-ncc').value.trim();
+  const nguoiGiaoHang = document.getElementById('f-nguoigiaohang').value.trim();
+  const soHoaDon = withPrice ? document.getElementById('f-sohoadon').value.trim() : '';
+  const ngayHoaDon = withPrice ? document.getElementById('f-ngayhoadon').value : '';
+  const nguoi = document.getElementById('f-nguoi').value.trim();
+  const ghiChu = document.getElementById('f-note').value.trim();
+  if(!ngay || !maKho){ toast('Vui lòng chọn ngày và kho nhập', 'error'); return; }
+  const items = collectItemRows(withPrice);
+  if(items.length===0){ toast('Vui lòng thêm ít nhất 1 dòng vật tư hợp lệ', 'error'); return; }
+  const tongTien = items.reduce((s,r)=>s + r.soLuong*r.donGia, 0);
+
+  const editingPhieu = editId ? state.inbound.find(p=>p.id===editId) : null;
+  const oldKhoOrphaned = editingPhieu && !state.warehouses.some(k=>k.ma===editingPhieu.maKho);
+  // Nếu kho gốc của phiếu không còn tồn tại (do đổi/xóa mã kho từ trước), giả định tồn kho của
+  // phiếu này thực chất đã "nằm sẵn" ở kho vừa chọn lại (vì số lượng tồn thường đã được di chuyển
+  // theo khi đổi mã kho) — nhờ vậy chỉ phần CHÊNH LỆCH số lượng mới thực sự ảnh hưởng tồn kho,
+  // tránh cộng trùng toàn bộ số lượng cũ vào kho mới.
+  const reversalKho = editingPhieu ? (oldKhoOrphaned ? maKho : editingPhieu.maKho) : null;
+
+  // Gộp chênh lệch tồn kho (hoàn tác số cũ nếu đang sửa + áp dụng số mới) rồi kiểm tra trước khi ghi
+  const delta = {};
+  function addDelta(kho, ma, d){ const k = kho+'||'+ma; delta[k] = (delta[k]||0) + d; }
+  if(editingPhieu) editingPhieu.items.forEach(r => addDelta(reversalKho, r.maHang, -r.soLuong));
+  items.forEach(r => addDelta(maKho, r.maHang, r.soLuong));
+
+  for(const key in delta){
+    const idx = key.indexOf('||');
+    const kho = key.slice(0, idx), ma = key.slice(idx+2);
+    const projected = getStock(kho, ma) + delta[key];
+    if(projected < -1e-9){
+      toast(`Không thể lưu: "${ma}" tại kho ${kho} sẽ bị âm tồn kho (có thể đã được xuất ở phiếu khác). Vui lòng kiểm tra lại.`, 'error');
+      return;
+    }
+  }
+  for(const key in delta){
+    const idx = key.indexOf('||');
+    const kho = key.slice(0, idx), ma = key.slice(idx+2);
+    adjustStock(kho, ma, delta[key]);
+  }
+
+  if(editingPhieu){
+    const oldMaKhoGoc = editingPhieu.maKho;
+    Object.assign(editingPhieu, { ngay, loai, maKho, nhaCungCap, nguoiGiaoHang, soHoaDon, ngayHoaDon, nguoiTao: nguoi, ghiChu, items, tongTien });
+    state.lastUser = nguoi;
+    saveKey('inbound'); saveKey('stock'); saveKey('lastUser');
+    toast(oldKhoOrphaned
+      ? `Đã cập nhật phiếu ${editingPhieu.soPhieu} và đồng bộ về kho "${maKho}" (mã kho gốc "${oldMaKhoGoc}" không còn tồn tại — chỉ phần chênh lệch số lượng được áp dụng vào tồn kho)`
+      : 'Đã cập nhật phiếu nhập kho ' + editingPhieu.soPhieu, 'success');
+  }else{
+    const phieu = {
+      id: genId(), soPhieu: genSoPhieu('PN'), ngay, loai, maKho, nhaCungCap, nguoiGiaoHang, soHoaDon, ngayHoaDon, nguoiTao: nguoi, ghiChu,
+      items, tongTien, createdAt: Date.now()
+    };
+    state.inbound.push(phieu);
+    state.lastUser = nguoi;
+    saveKey('inbound'); saveKey('stock'); saveKey('lastUser');
+    toast('Đã lưu phiếu nhập kho ' + phieu.soPhieu, 'success');
+  }
+  closeModal();
+  refreshAll();
+}
+function viewNhapDetail(id){
+  const p = state.inbound.find(x=>x.id===id);
+  if(!p) return;
+  const kho = state.warehouses.find(k=>k.ma===p.maKho);
+  openModal(`
+    <div class="modal-head"><h3>Phiếu nhập ${esc(p.soPhieu)}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="detail-grid">
+        <div><div class="dt-lbl">Ngày nhập</div><div class="dt-val">${fmtDate(p.ngay)}</div></div>
+        <div><div class="dt-lbl">Loại phiếu</div><div class="dt-val">${p.loai==='mua'?'Nhập kho mua hàng':'Nhập kho trực tiếp'}</div></div>
+        <div><div class="dt-lbl">Kho nhập</div><div class="dt-val">${esc(p.maKho)}${kho?' — '+esc(kho.ten):''}</div></div>
+        <div><div class="dt-lbl">Nhà cung cấp</div><div class="dt-val">${esc(p.nhaCungCap||'—')}</div></div>
+        <div><div class="dt-lbl">Người giao hàng</div><div class="dt-val">${esc(p.nguoiGiaoHang||'—')}</div></div>
+        ${p.loai==='mua'&&(p.soHoaDon||p.ngayHoaDon)?`<div><div class="dt-lbl">Hóa đơn</div><div class="dt-val">${esc(p.soHoaDon||'—')}${p.ngayHoaDon?' — ngày '+esc(fmtDDMMYYYY(p.ngayHoaDon)):''}</div></div>`:''}
+        <div><div class="dt-lbl">Người thực hiện</div><div class="dt-val">${esc(p.nguoiTao||'—')}</div></div>
+        <div><div class="dt-lbl">Ghi chú</div><div class="dt-val">${esc(p.ghiChu||'—')}</div></div>
+      </div>
+      <table>
+        <thead><tr><th>Mã hàng</th><th>Tên hàng</th><th>ĐVT</th><th class="right">SL</th>${p.loai==='mua'?'<th class="right">Đơn giá</th><th class="right">Thành tiền</th>':''}</tr></thead>
+        <tbody>
+        ${p.items.map(r=>`<tr><td><span class="tag-code">${esc(r.maHang)}</span></td><td>${esc(r.ten)}</td><td>${esc(r.dvt)}</td><td class="right">${fmtNum(r.soLuong)}</td>${p.loai==='mua'?`<td class="right">${fmtMoney(r.donGia)}</td><td class="right">${fmtMoney(r.soLuong*r.donGia)}</td>`:''}</tr>`).join('')}
+        </tbody>
+      </table>
+      ${p.loai==='mua'?`<div style="text-align:right;margin-top:10px;font-size:14px;">Tổng tiền: <b style="color:var(--primary);">${fmtMoney(p.tongTien)}</b></div>`:''}
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="printPhieuNhap('${p.id}')">🖨️ In phiếu</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Đóng</button>
+    </div>
+  `, true);
+}
+function deleteNhap(id){
+  const p = state.inbound.find(x=>x.id===id);
+  if(!p) return;
+  const khoTonTai = state.warehouses.some(k=>k.ma===p.maKho);
+  if(khoTonTai){
+    for(const r of p.items){
+      const projected = getStock(p.maKho, r.maHang) - r.soLuong;
+      if(projected < -1e-9){
+        toast(`Không thể xóa: "${r.maHang}" tại kho ${p.maKho} sẽ bị âm tồn kho (số lượng đã được xuất dùng ở phiếu khác). Vui lòng kiểm tra/điều chỉnh các phiếu xuất liên quan trước.`, 'error');
+        return;
+      }
+    }
+  }
+  if(!confirm(`Xóa phiếu nhập ${p.soPhieu}? Tồn kho sẽ được hoàn tác tương ứng.`)) return;
+  if(khoTonTai) p.items.forEach(r => adjustStock(p.maKho, r.maHang, -r.soLuong));
+  state.inbound = state.inbound.filter(x=>x.id!==id);
+  saveKey('inbound'); saveKey('stock');
+  toast(khoTonTai ? 'Đã xóa phiếu nhập, tồn kho đã được hoàn tác' : `Đã xóa phiếu nhập (mã kho "${p.maKho}" không còn tồn tại nên không hoàn tác tồn kho)`);
+  refreshAll();
+}
+
+/* =====================================================================
+   MODULE 4: XUẤT KHO
+===================================================================== */
+const XUAT_LOAI_LABEL = { san_xuat: 'Xuất sản xuất', chuyen_kho: 'Xuất chuyển kho', kiem_kho: 'Kiểm kho' };
+const XK_PAGE_SIZE = 20;
+let xkPage = 1;
+let xkExpanded = new Set();
+function xkGoToPage(delta){ xkPage += delta; renderXuat(); }
+function toggleXkExpand(id){
+  if(xkExpanded.has(id)) xkExpanded.delete(id); else xkExpanded.add(id);
+  renderXuat();
+}
+function getFilteredXuatList(){
+  const loai = document.getElementById('xk-filter-loai').value;
+  const kho = document.getElementById('xk-filter-kho').value;
+  const qVatTu = (document.getElementById('xk-search-vattu').value||'').trim().toLowerCase();
+  const tuNgay = document.getElementById('xk-tu-ngay').value;
+  const denNgay = document.getElementById('xk-den-ngay').value;
+  let list = state.outbound.slice().sort((a,b)=>b.createdAt-a.createdAt);
+  if(loai) list = list.filter(p=>p.loai===loai);
+  if(kho) list = list.filter(p=>p.maKhoXuat===kho || p.maKhoNhan===kho);
+  if(qVatTu) list = list.filter(p=>p.items.some(r=>(r.maHang+' '+r.ten).toLowerCase().includes(qVatTu)));
+  if(tuNgay) list = list.filter(p=>p.ngay && p.ngay.slice(0,10) >= tuNgay);
+  if(denNgay) list = list.filter(p=>p.ngay && p.ngay.slice(0,10) <= denNgay);
+  return list;
+}
+function renderXuat(){
+  const tbody = document.getElementById('xuat-tbody');
+  const pagerEl = document.getElementById('xk-pagination');
+  let list = getFilteredXuatList();
+  if(list.length===0){
+    const emptyMsg = state.outbound.length===0
+      ? `Chưa có phiếu xuất kho nào.${state.warehouses.length===0?'<br><b>Lưu ý:</b> cần tạo ít nhất 1 kho trước khi xuất.':''}`
+      : 'Không có phiếu nào phù hợp với bộ lọc hiện tại.';
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="7">${emptyMsg}</td></tr>`;
+    pagerEl.innerHTML = '';
+    return;
+  }
+  const totalPages = Math.max(1, Math.ceil(list.length / XK_PAGE_SIZE));
+  if(xkPage > totalPages) xkPage = totalPages;
+  if(xkPage < 1) xkPage = 1;
+  const pageList = list.slice((xkPage-1)*XK_PAGE_SIZE, (xkPage-1)*XK_PAGE_SIZE + XK_PAGE_SIZE);
+
+  tbody.innerHTML = pageList.map(p=>{
+    const pillClass = p.loai==='san_xuat'?'pill-blue':p.loai==='chuyen_kho'?'pill-amber':'pill-green';
+    let noiNhan = '—';
+    if(p.loai==='san_xuat') noiNhan = esc(p.boPhanNhan||'—') + (p.nguoiNhanHang ? ` <span style="color:var(--text-faint);">— ${esc(p.nguoiNhanHang)}</span>` : '');
+    else if(p.loai==='chuyen_kho') noiNhan = esc(p.maKhoNhan);
+    else noiNhan = 'Điều chỉnh theo kiểm kê thực tế';
+    const expanded = xkExpanded.has(p.id);
+    const isKiemKho = p.loai==='kiem_kho';
+    const mainRow = `<tr>
+      <td class="center"><button class="icon-btn" title="${expanded?'Thu gọn':'Xem chi tiết vật tư'}" onclick="toggleXkExpand('${p.id}')">${expanded?'▾':'▸'}</button></td>
+      <td><span class="tag-code">${esc(p.soPhieu)}</span></td>
+      <td class="nowrap">${fmtDate(p.ngay)}</td>
+      <td><span class="pill ${pillClass}">${XUAT_LOAI_LABEL[p.loai]}</span></td>
+      <td>${esc(p.maKhoXuat)}</td>
+      <td>${noiNhan}</td>
+      <td class="center nowrap">
+        <button class="icon-btn" title="Sửa" onclick="editXuat('${p.id}')">✎</button>
+        <button class="icon-btn" title="Xem" onclick="viewXuatDetail('${p.id}')">👁</button>
+        ${p.loai!=='kiem_kho'?`<button class="icon-btn" title="In phiếu xuất kho" onclick="printPhieuXuat('${p.id}')">🖨️</button>`:''}
+        <button class="icon-btn danger" title="Xóa (hoàn tác tồn kho)" onclick="deleteXuat('${p.id}')">🗑</button>
+      </td>
+    </tr>`;
+    const detailRow = !expanded ? '' : `<tr class="nk-detail-row">
+      <td></td>
+      <td colspan="6" style="background:#FAFBFC;padding:10px 14px 16px;">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead><tr>
+            <th style="font-size:10.5px;text-transform:uppercase;color:var(--text-muted);text-align:left;padding:5px 8px;border-bottom:1px solid var(--border);">Mã hàng</th>
+            <th style="font-size:10.5px;text-transform:uppercase;color:var(--text-muted);text-align:left;padding:5px 8px;border-bottom:1px solid var(--border);">Tên hàng</th>
+            <th style="font-size:10.5px;text-transform:uppercase;color:var(--text-muted);text-align:left;padding:5px 8px;border-bottom:1px solid var(--border);">ĐVT</th>
+            ${isKiemKho?`<th style="font-size:10.5px;text-transform:uppercase;color:var(--text-muted);text-align:right;padding:5px 8px;border-bottom:1px solid var(--border);">Tồn sổ sách</th><th style="font-size:10.5px;text-transform:uppercase;color:var(--text-muted);text-align:right;padding:5px 8px;border-bottom:1px solid var(--border);">Tồn thực tế</th><th style="font-size:10.5px;text-transform:uppercase;color:var(--text-muted);text-align:right;padding:5px 8px;border-bottom:1px solid var(--border);">Chênh lệch</th>`
+              :`<th style="font-size:10.5px;text-transform:uppercase;color:var(--text-muted);text-align:right;padding:5px 8px;border-bottom:1px solid var(--border);">Số lượng</th>`}
+          </tr></thead>
+          <tbody>
+            ${p.items.map(r=>`<tr>
+              <td style="padding:5px 8px;border-bottom:1px solid #EEF1F4;"><span class="tag-code">${esc(r.maHang)}</span></td>
+              <td style="padding:5px 8px;border-bottom:1px solid #EEF1F4;">${esc(r.ten)}</td>
+              <td style="padding:5px 8px;border-bottom:1px solid #EEF1F4;">${esc(r.dvt)}</td>
+              ${isKiemKho?`<td style="padding:5px 8px;border-bottom:1px solid #EEF1F4;text-align:right;">${fmtNum(r.tonSoSach)}</td><td style="padding:5px 8px;border-bottom:1px solid #EEF1F4;text-align:right;">${fmtNum(r.tonThucTe)}</td><td style="padding:5px 8px;border-bottom:1px solid #EEF1F4;text-align:right;color:${r.chenhLech>0?'var(--success)':r.chenhLech<0?'var(--danger)':'inherit'}">${r.chenhLech>0?'+':''}${fmtNum(r.chenhLech)}</td>`
+                :`<td style="padding:5px 8px;border-bottom:1px solid #EEF1F4;text-align:right;">${fmtNum(r.soLuong)}</td>`}
+            </tr>`).join('')}
+          </tbody>
+        </table>
+        ${p.ghiChu?`<div style="margin-top:8px;font-size:12px;color:var(--text-muted);"><b>Ghi chú:</b> ${esc(p.ghiChu)}</div>`:''}
+      </td>
+    </tr>`;
+    return mainRow + detailRow;
+  }).join('');
+
+  const fromIdx = (xkPage-1)*XK_PAGE_SIZE + 1;
+  const toIdx = (xkPage-1)*XK_PAGE_SIZE + pageList.length;
+  pagerEl.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <span style="font-size:12px;color:var(--text-muted);">Hiển thị ${fromIdx}–${toIdx} trong tổng số ${list.length} phiếu</span>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-ghost btn-sm" onclick="xkGoToPage(-1)" ${xkPage<=1?'disabled':''}>‹ Trước</button>
+        <span style="font-size:12.5px;color:var(--text-muted);">Trang ${xkPage}/${totalPages}</span>
+        <button class="btn btn-ghost btn-sm" onclick="xkGoToPage(1)" ${xkPage>=totalPages?'disabled':''}>Sau ›</button>
+      </div>
+    </div>`;
+}
+document.getElementById('xk-filter-loai').addEventListener('change', ()=>{ xkPage=1; renderXuat(); });
+document.getElementById('xk-filter-kho').addEventListener('change', ()=>{ xkPage=1; renderXuat(); });
+document.getElementById('xk-search-vattu').addEventListener('input', ()=>{ xkPage=1; renderXuat(); });
+document.getElementById('xk-tu-ngay').addEventListener('change', ()=>{ xkPage=1; renderXuat(); });
+document.getElementById('xk-den-ngay').addEventListener('change', ()=>{ xkPage=1; renderXuat(); });
+document.getElementById('btn-add-xuat').addEventListener('click', ()=>openXuatTypePicker());
+document.getElementById('btn-export-xuat').addEventListener('click', exportXuatExcel);
+function exportXuatExcel(){
+  if(typeof XLSX === 'undefined'){ toast('Không thể tải thư viện xuất Excel (cần kết nối internet). Vui lòng thử lại.', 'error'); return; }
+  const list = getFilteredXuatList();
+  if(list.length===0){ toast('Không có dữ liệu phù hợp với bộ lọc để xuất Excel', 'error'); return; }
+  const rows = [];
+  list.slice().reverse().forEach(p=>{
+    const noiNhan = p.loai==='chuyen_kho' ? p.maKhoNhan : (p.loai==='san_xuat' ? (p.boPhanNhan||'') : '');
+    p.items.forEach(r=>{
+      rows.push({
+        'Số phiếu': p.soPhieu,
+        'Ngày': fmtDate(p.ngay),
+        'Loại xuất': XUAT_LOAI_LABEL[p.loai],
+        'Kho xuất': p.maKhoXuat,
+        'Nơi nhận / Kho nhận': noiNhan,
+        'Người nhận hàng': p.loai==='san_xuat' ? (p.nguoiNhanHang||'') : '',
+        'Người thực hiện': p.nguoiTao||'',
+        'Mã hàng': r.maHang,
+        'Tên hàng': r.ten,
+        'ĐVT': r.dvt||'',
+        'Số lượng xuất': p.loai==='kiem_kho' ? '' : r.soLuong,
+        'Tồn sổ sách (kiểm kho)': p.loai==='kiem_kho' ? r.tonSoSach : '',
+        'Tồn thực tế (kiểm kho)': p.loai==='kiem_kho' ? r.tonThucTe : '',
+        'Chênh lệch (kiểm kho)': p.loai==='kiem_kho' ? r.chenhLech : '',
+        'Ghi chú': p.ghiChu||''
+      });
+    });
+  });
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [{wch:14},{wch:16},{wch:14},{wch:12},{wch:18},{wch:16},{wch:16},{wch:10},{wch:26},{wch:8},{wch:12},{wch:14},{wch:14},{wch:14},{wch:24}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Xuat kho');
+  XLSX.writeFile(wb, `xuat-kho-${todayISO()}.xlsx`);
+  toast('Đã xuất file Excel', 'success');
+}
+
+function editXuat(id){
+  const p = state.outbound.find(x=>x.id===id);
+  if(!p) return;
+  openXuatForm(p.loai, id);
+}
+function openXuatTypePicker(){
+  if(state.warehouses.length===0){ toast('Vui lòng tạo ít nhất 1 kho trước khi xuất kho', 'error'); if(canAccess('kho')) switchView('kho'); return; }
+  if(state.items.length===0){ toast('Vui lòng khai báo mã hàng trước khi xuất kho', 'error'); if(canAccess('mahang')) switchView('mahang'); return; }
+  openModal(`
+    <div class="modal-head"><h3>Chọn loại phiếu xuất kho</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="radio-group" style="flex-direction:column;">
+        <label class="radio-card" style="cursor:pointer;" onclick="openXuatForm('san_xuat')"><b>🏭 Xuất sản xuất</b><span>Xuất vật tư cho bộ phận / công đoạn sản xuất</span></label>
+        <label class="radio-card" style="cursor:pointer;" onclick="openXuatForm('chuyen_kho')"><b>🔁 Xuất chuyển kho</b><span>Chuyển vật tư từ kho này sang kho khác</span></label>
+        <label class="radio-card" style="cursor:pointer;" onclick="openXuatForm('kiem_kho')"><b>📋 Kiểm kho</b><span>Đối chiếu tồn sổ sách với tồn thực tế và điều chỉnh</span></label>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal()">Hủy</button></div>
+  `);
+}
+
+function openXuatForm(loai, editId){
+  const editingPhieu = editId ? state.outbound.find(p=>p.id===editId) : null;
+  const khoOpts = state.warehouses.map(k=>`<option value="${esc(k.ma)}">${esc(k.ma)} — ${esc(k.ten)}</option>`).join('');
+  const boPhanList = [...new Set(state.outbound.filter(p=>p.loai==='san_xuat').map(p=>p.boPhanNhan).filter(Boolean))];
+
+  if(loai==='kiem_kho'){
+    const orphanKho = editingPhieu && !state.warehouses.some(k=>k.ma===editingPhieu.maKhoXuat);
+    const khoOptsKiem = (orphanKho ? `<option value="" disabled selected>— Chọn lại kho (mã gốc "${esc(editingPhieu.maKhoXuat)}" không còn tồn tại) —</option>` : '') +
+      state.warehouses.map(k=>`<option value="${esc(k.ma)}" ${editingPhieu&&editingPhieu.maKhoXuat===k.ma?'selected':''}>${esc(k.ma)} — ${esc(k.ten)}</option>`).join('');
+    openModal(`
+      <div class="modal-head"><h3>${editingPhieu?'Sửa phiếu kiểm kho':'Tạo phiếu kiểm kho'}${editingPhieu?` <span class="tag-code">${esc(editingPhieu.soPhieu)}</span>`:''}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+      <div class="modal-body">
+        <input type="hidden" id="kk-editing-id" value="${editId||''}">
+        ${orphanKho?`<div class="help-banner warn-banner">⚠️ Mã kho gốc của phiếu này ("${esc(editingPhieu.maKhoXuat)}") không còn tồn tại — vui lòng chọn lại đúng kho hiện tại rồi lưu để đồng bộ lại dữ liệu.</div>`:''}
+        <div class="form-grid">
+          <div class="form-group"><label>Ngày kiểm *</label><input id="f-ngay" type="datetime-local" value="${editingPhieu?editingPhieu.ngay:nowDateTimeLocal()}"></div>
+          <div class="form-group"><label>Kho kiểm *</label><select id="f-kho-kiem" onchange="renderKiemKhoRows()">${khoOptsKiem}</select></div>
+          <div class="form-group full"><label>Người thực hiện</label><input id="f-nguoi" type="text" value="${editingPhieu?esc(editingPhieu.nguoiTao||''):esc((currentUser&&currentUser.hoTen)||state.lastUser||'')}" placeholder="Tên người kiểm kho"></div>
+        </div>
+        <div class="section-title" style="margin-top:16px;">Đối chiếu tồn kho</div>
+        <div class="help-banner">Cột "Tồn thực tế" mặc định lấy theo tồn sổ sách. Chỉ cần sửa số liệu tại các mã hàng có chênh lệch — hệ thống sẽ tự tính và điều chỉnh tồn kho khi lưu.</div>
+        <input type="text" id="kk-search" placeholder="Tìm mã hàng trong bảng..." style="margin-bottom:8px;width:100%;max-width:260px;padding:8px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px;" oninput="renderKiemKhoRows()">
+        <div class="tbl-wrap" style="max-height:320px;overflow-y:auto;">
+          <table class="items-editor">
+            <thead><tr><th style="width:20%">Mã hàng</th><th style="width:26%">Tên hàng</th><th style="width:10%">ĐVT</th><th style="width:14%" class="right">Tồn sổ sách</th><th style="width:16%">Tồn thực tế</th><th style="width:14%" class="right">Chênh lệch</th></tr></thead>
+            <tbody id="kk-editor-body"></tbody>
+          </table>
+        </div>
+        <div class="form-group full" style="margin-top:14px;"><label>Ghi chú</label><textarea id="f-note" placeholder="Lý do chênh lệch, ghi chú thêm...">${editingPhieu?esc(editingPhieu.ghiChu||''):''}</textarea></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" onclick="closeModal()">Hủy</button>
+        <button class="btn btn-primary" onclick="saveKiemKho(${editId?`'${editId}'`:'null'})">${editingPhieu?'Cập nhật phiếu kiểm kho':'Lưu phiếu kiểm kho'}</button>
+      </div>
+    `, true);
+    renderKiemKhoRows();
+    return;
+  }
+
+  const isChuyenKho = loai==='chuyen_kho';
+  const orphanKhoXuat = editingPhieu && !state.warehouses.some(k=>k.ma===editingPhieu.maKhoXuat);
+  const orphanKhoNhan = editingPhieu && isChuyenKho && editingPhieu.maKhoNhan && !state.warehouses.some(k=>k.ma===editingPhieu.maKhoNhan);
+  const khoXuatOpts = (orphanKhoXuat ? `<option value="" disabled selected>— Chọn lại kho (mã gốc "${esc(editingPhieu.maKhoXuat)}" không còn tồn tại) —</option>` : '') +
+    state.warehouses.map(k=>`<option value="${esc(k.ma)}" ${editingPhieu&&editingPhieu.maKhoXuat===k.ma?'selected':''}>${esc(k.ma)} — ${esc(k.ten)}</option>`).join('');
+  const khoNhanOpts = (orphanKhoNhan ? `<option value="" disabled selected>— Chọn lại kho (mã gốc "${esc(editingPhieu.maKhoNhan)}" không còn tồn tại) —</option>` : '') +
+    state.warehouses.map(k=>`<option value="${esc(k.ma)}" ${editingPhieu&&editingPhieu.maKhoNhan===k.ma?'selected':''}>${esc(k.ma)} — ${esc(k.ten)}</option>`).join('');
+  openModal(`
+    <div class="modal-head"><h3>${editingPhieu?(isChuyenKho?'Sửa phiếu xuất chuyển kho':'Sửa phiếu xuất sản xuất'):(isChuyenKho?'Tạo phiếu xuất chuyển kho':'Tạo phiếu xuất sản xuất')}${editingPhieu?` <span class="tag-code">${esc(editingPhieu.soPhieu)}</span>`:''}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      ${(orphanKhoXuat||orphanKhoNhan)?`<div class="help-banner warn-banner">⚠️ Một số mã kho gốc của phiếu này không còn tồn tại — vui lòng chọn lại đúng kho hiện tại rồi lưu để đồng bộ lại dữ liệu.</div>`:''}
+      <div class="form-grid">
+        <div class="form-group"><label>Ngày xuất *</label><input id="f-ngay" type="datetime-local" value="${editingPhieu?editingPhieu.ngay:nowDateTimeLocal()}"></div>
+        <div class="form-group"><label>Kho xuất *</label><select id="f-khoxuat">${khoXuatOpts}</select></div>
+        ${isChuyenKho ? `<div class="form-group"><label>Kho nhận *</label><select id="f-khonhan">${khoNhanOpts}</select></div>` :
+          `<div class="form-group"><label>Bộ phận / công đoạn nhận *</label><input id="f-bophan" list="dl-bophan" type="text" value="${editingPhieu?esc(editingPhieu.boPhanNhan||''):''}" placeholder="VD: Nuôi tằm - Phòng 2"><datalist id="dl-bophan">${boPhanList.map(b=>`<option value="${esc(b)}">`).join('')}</datalist></div>`}
+        ${!isChuyenKho ? `<div class="form-group"><label>Người nhận hàng <span class="hint">(không bắt buộc)</span></label><input id="f-nguoinhanhang" list="dl-nguoinhan" type="text" value="${editingPhieu?esc(editingPhieu.nguoiNhanHang||''):''}" placeholder="Chọn hoặc nhập tên người nhận" oninput="autofillBoPhanFromRecipient(this)"><datalist id="dl-nguoinhan">${recipientNameOptions()}</datalist></div>` : ''}
+        <div class="form-group"><label>Người thực hiện</label><input id="f-nguoi" type="text" value="${editingPhieu?esc(editingPhieu.nguoiTao||''):esc((currentUser&&currentUser.hoTen)||state.lastUser||'')}" placeholder="Tên người tạo phiếu"></div>
+      </div>
+      <div class="section-title" style="margin-top:16px;">Danh sách vật tư xuất</div>
+      <datalist id="dl-item-catalog">${itemDatalistOptionsHtml()}</datalist>
+      <table class="items-editor">
+        <thead><tr><th style="width:40%">Mã hàng</th><th style="width:16%">ĐVT</th><th style="width:20%">Số lượng</th><th style="width:8%"></th></tr></thead>
+        <tbody id="items-editor-body">${editingPhieu ? editingPhieu.items.map(r=>buildItemRow(r, false)).join('') : buildItemRow(null, false)}</tbody>
+      </table>
+      <button type="button" class="btn btn-ghost btn-sm add-row-btn" onclick="addItemRow(false)">+ Thêm dòng</button>
+      <div class="form-group full" style="margin-top:14px;"><label>Ghi chú</label><textarea id="f-note" placeholder="Ghi chú thêm (không bắt buộc)">${editingPhieu?esc(editingPhieu.ghiChu||''):''}</textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Hủy</button>
+      <button class="btn btn-primary" onclick="saveXuat('${loai}'${editId?`,'${editId}'`:''})">${editingPhieu?'Cập nhật phiếu xuất':'Lưu phiếu xuất'}</button>
+    </div>
+  `);
+}
+
+function renderKiemKhoRows(){
+  const kho = document.getElementById('f-kho-kiem').value;
+  const q = (document.getElementById('kk-search')?.value||'').trim().toLowerCase();
+  const editId = document.getElementById('kk-editing-id')?.value || null;
+  const editingPhieu = editId ? state.outbound.find(p=>p.id===editId) : null;
+  let list = state.items.slice().sort((a,b)=>a.ma.localeCompare(b.ma));
+  if(q) list = list.filter(i=>(i.ma+' '+i.ten).toLowerCase().includes(q));
+  const body = document.getElementById('kk-editor-body');
+  if(list.length===0){ body.innerHTML = `<tr class="empty-row"><td colspan="6">Không có mã hàng phù hợp.</td></tr>`; return; }
+  body.innerHTML = list.map(i=>{
+    let ton = getStock(kho, i.ma);
+    if(editingPhieu && editingPhieu.maKhoXuat===kho){
+      const orig = editingPhieu.items.find(r=>r.maHang===i.ma);
+      if(orig) ton = ton - orig.chenhLech;
+    }
+    return `<tr data-ma="${esc(i.ma)}">
+      <td><span class="tag-code">${esc(i.ma)}</span></td>
+      <td>${esc(i.ten)}</td>
+      <td>${esc(i.dvt||'')}</td>
+      <td class="right kk-soso" data-val="${ton}">${fmtNum(ton)}</td>
+      <td><input type="number" class="kk-thucte" step="any" value="${ton}" oninput="recalcKkDiff(this)"></td>
+      <td class="right kk-chenh">0</td>
+    </tr>`;
+  }).join('');
+}
+function recalcKkDiff(input){
+  const tr = input.closest('tr');
+  const soso = Number(tr.querySelector('.kk-soso').dataset.val)||0;
+  const thucte = Number(input.value)||0;
+  const diff = Math.round((thucte - soso + Number.EPSILON)*1000)/1000;
+  const cell = tr.querySelector('.kk-chenh');
+  cell.textContent = (diff>0?'+':'') + fmtNum(diff);
+  cell.style.color = diff>0?'var(--success)':diff<0?'var(--danger)':'var(--text-muted)';
+}
+function saveKiemKho(editId){
+  const ngay = document.getElementById('f-ngay').value;
+  const kho = document.getElementById('f-kho-kiem').value;
+  const nguoi = document.getElementById('f-nguoi').value.trim();
+  const ghiChu = document.getElementById('f-note').value.trim();
+  if(!ngay || !kho){ toast('Vui lòng chọn ngày và kho kiểm', 'error'); return; }
+  const editingPhieu = editId ? state.outbound.find(p=>p.id===editId) : null;
+  const rows = [];
+  document.querySelectorAll('#kk-editor-body tr[data-ma]').forEach(tr=>{
+    const ma = tr.dataset.ma;
+    const soso = Number(tr.querySelector('.kk-soso').dataset.val)||0;
+    const thucte = Number(tr.querySelector('.kk-thucte').value)||0;
+    if(Math.abs(thucte-soso) > 1e-9){
+      const item = state.items.find(i=>i.ma===ma);
+      rows.push({maHang: ma, ten: item?item.ten:ma, dvt: item?item.dvt:'', tonSoSach: soso, tonThucTe: thucte, chenhLech: Math.round((thucte-soso+Number.EPSILON)*1000)/1000});
+    }
+  });
+  if(rows.length===0){ toast('Không có chênh lệch nào để lưu phiếu kiểm kho', 'error'); return; }
+
+  if(editingPhieu){
+    // Luôn khôi phục kho GỐC về đúng tồn sổ sách đã ghi nhận ban đầu, rồi mới áp giá trị mới vào kho hiện tại
+    // (kho hiện tại có thể trùng kho gốc — khi đó renderKiemKhoRows đã tính sẵn tồn sổ sách loại trừ phiếu này)
+    const oldKhoTonTai = state.warehouses.some(k=>k.ma===editingPhieu.maKhoXuat);
+    if(oldKhoTonTai) editingPhieu.items.forEach(r => setStock(editingPhieu.maKhoXuat, r.maHang, r.tonSoSach));
+    rows.forEach(r => setStock(kho, r.maHang, r.tonThucTe));
+    Object.assign(editingPhieu, { ngay, maKhoXuat: kho, nguoiTao: nguoi, ghiChu, items: rows });
+    state.lastUser = nguoi;
+    saveKey('outbound'); saveKey('stock'); saveKey('lastUser');
+    toast('Đã cập nhật phiếu kiểm kho ' + editingPhieu.soPhieu, 'success');
+  }else{
+    const phieu = { id: genId(), soPhieu: genSoPhieu('PK'), ngay, loai:'kiem_kho', maKhoXuat: kho, nguoiTao: nguoi, ghiChu, items: rows, createdAt: Date.now() };
+    rows.forEach(r => setStock(kho, r.maHang, r.tonThucTe));
+    state.outbound.push(phieu);
+    state.lastUser = nguoi;
+    saveKey('outbound'); saveKey('stock'); saveKey('lastUser');
+    toast('Đã lưu phiếu kiểm kho ' + phieu.soPhieu + ', tồn kho đã được điều chỉnh', 'success');
+  }
+  closeModal();
+  refreshAll();
+}
+
+function saveXuat(loai, editId){
+  const ngay = document.getElementById('f-ngay').value;
+  const maKhoXuat = document.getElementById('f-khoxuat').value;
+  const nguoi = document.getElementById('f-nguoi').value.trim();
+  const ghiChu = document.getElementById('f-note').value.trim();
+  let maKhoNhan = '', boPhanNhan = '', nguoiNhanHang = '';
+  if(loai==='chuyen_kho'){
+    maKhoNhan = document.getElementById('f-khonhan').value;
+    if(maKhoNhan===maKhoXuat){ toast('Kho nhận phải khác kho xuất', 'error'); return; }
+  }else{
+    boPhanNhan = document.getElementById('f-bophan').value.trim();
+    if(!boPhanNhan){ toast('Vui lòng nhập bộ phận / công đoạn nhận', 'error'); return; }
+    nguoiNhanHang = document.getElementById('f-nguoinhanhang').value.trim();
+  }
+  if(!ngay || !maKhoXuat){ toast('Vui lòng chọn ngày và kho xuất', 'error'); return; }
+  const items = collectItemRows(false);
+  if(items.length===0){ toast('Vui lòng thêm ít nhất 1 dòng vật tư hợp lệ', 'error'); return; }
+
+  const editingPhieu = editId ? state.outbound.find(p=>p.id===editId) : null;
+  // Nếu kho gốc của phiếu (kho xuất/kho nhận) không còn tồn tại, coi như tồn kho của phiếu đã
+  // "nằm sẵn" ở kho vừa chọn lại — chỉ phần chênh lệch mới thực sự ảnh hưởng tồn kho.
+  function safeReversalKho(originalKho, newKhoSelected){
+    if(!originalKho) return null;
+    return state.warehouses.some(k=>k.ma===originalKho) ? originalKho : newKhoSelected;
+  }
+
+  const delta = {};
+  function addDelta(kho, ma, d){ if(!kho) return; const k = kho+'||'+ma; delta[k] = (delta[k]||0) + d; }
+  if(editingPhieu){
+    const revXuat = safeReversalKho(editingPhieu.maKhoXuat, maKhoXuat);
+    const revNhan = editingPhieu.loai==='chuyen_kho' ? safeReversalKho(editingPhieu.maKhoNhan, maKhoNhan) : null;
+    editingPhieu.items.forEach(r=>{
+      addDelta(revXuat, r.maHang, r.soLuong);
+      if(revNhan) addDelta(revNhan, r.maHang, -r.soLuong);
+    });
+  }
+  items.forEach(r=>{
+    addDelta(maKhoXuat, r.maHang, -r.soLuong);
+    if(loai==='chuyen_kho') addDelta(maKhoNhan, r.maHang, r.soLuong);
+  });
+
+  for(const key in delta){
+    const idx = key.indexOf('||');
+    const kho = key.slice(0, idx), ma = key.slice(idx+2);
+    const projected = getStock(kho, ma) + delta[key];
+    if(projected < -1e-9){
+      toast(`Không thể lưu: "${ma}" tại kho ${kho} sẽ bị âm tồn kho (có thể đã được xuất ở phiếu khác). Vui lòng kiểm tra lại.`, 'error');
+      return;
+    }
+  }
+  for(const key in delta){
+    const idx = key.indexOf('||');
+    const kho = key.slice(0, idx), ma = key.slice(idx+2);
+    adjustStock(kho, ma, delta[key]);
+  }
+
+  if(editingPhieu){
+    Object.assign(editingPhieu, { ngay, loai, maKhoXuat, maKhoNhan, boPhanNhan, nguoiNhanHang, nguoiTao: nguoi, ghiChu, items });
+    state.lastUser = nguoi;
+    saveKey('outbound'); saveKey('stock'); saveKey('lastUser');
+    toast('Đã cập nhật phiếu xuất kho ' + editingPhieu.soPhieu, 'success');
+  }else{
+    const phieu = { id: genId(), soPhieu: genSoPhieu('PX'), ngay, loai, maKhoXuat, maKhoNhan, boPhanNhan, nguoiNhanHang, nguoiTao: nguoi, ghiChu, items, createdAt: Date.now() };
+    state.outbound.push(phieu);
+    state.lastUser = nguoi;
+    saveKey('outbound'); saveKey('stock'); saveKey('lastUser');
+    toast('Đã lưu phiếu xuất kho ' + phieu.soPhieu, 'success');
+  }
+  closeModal();
+  refreshAll();
+}
+
+function viewXuatDetail(id){
+  const p = state.outbound.find(x=>x.id===id);
+  if(!p) return;
+  let extraRows = '';
+  if(p.loai==='kiem_kho'){
+    extraRows = `<table><thead><tr><th>Mã hàng</th><th>Tên hàng</th><th>ĐVT</th><th class="right">Tồn sổ sách</th><th class="right">Tồn thực tế</th><th class="right">Chênh lệch</th></tr></thead>
+      <tbody>${p.items.map(r=>`<tr><td><span class="tag-code">${esc(r.maHang)}</span></td><td>${esc(r.ten)}</td><td>${esc(r.dvt)}</td><td class="right">${fmtNum(r.tonSoSach)}</td><td class="right">${fmtNum(r.tonThucTe)}</td><td class="right" style="color:${r.chenhLech>0?'var(--success)':r.chenhLech<0?'var(--danger)':'inherit'}">${r.chenhLech>0?'+':''}${fmtNum(r.chenhLech)}</td></tr>`).join('')}</tbody></table>`;
+  }else{
+    extraRows = `<table><thead><tr><th>Mã hàng</th><th>Tên hàng</th><th>ĐVT</th><th class="right">Số lượng</th></tr></thead>
+      <tbody>${p.items.map(r=>`<tr><td><span class="tag-code">${esc(r.maHang)}</span></td><td>${esc(r.ten)}</td><td>${esc(r.dvt)}</td><td class="right">${fmtNum(r.soLuong)}</td></tr>`).join('')}</tbody></table>`;
+  }
+  openModal(`
+    <div class="modal-head"><h3>Phiếu ${esc(p.soPhieu)}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="detail-grid">
+        <div><div class="dt-lbl">Ngày</div><div class="dt-val">${fmtDate(p.ngay)}</div></div>
+        <div><div class="dt-lbl">Loại phiếu</div><div class="dt-val">${XUAT_LOAI_LABEL[p.loai]}</div></div>
+        <div><div class="dt-lbl">Kho xuất</div><div class="dt-val">${esc(p.maKhoXuat)}</div></div>
+        <div><div class="dt-lbl">${p.loai==='chuyen_kho'?'Kho nhận':p.loai==='san_xuat'?'Bộ phận nhận':'—'}</div><div class="dt-val">${esc(p.maKhoNhan||p.boPhanNhan||'—')}</div></div>
+        ${p.loai==='san_xuat'?`<div><div class="dt-lbl">Người nhận hàng</div><div class="dt-val">${esc(p.nguoiNhanHang||'—')}</div></div>`:''}
+        <div><div class="dt-lbl">Người thực hiện</div><div class="dt-val">${esc(p.nguoiTao||'—')}</div></div>
+        <div><div class="dt-lbl">Ghi chú</div><div class="dt-val">${esc(p.ghiChu||'—')}</div></div>
+      </div>
+      ${extraRows}
+    </div>
+    <div class="modal-foot">
+      ${p.loai!=='kiem_kho'?`<button class="btn btn-ghost" onclick="printPhieuXuat('${p.id}')">🖨️ In phiếu</button>`:''}
+      <button class="btn btn-ghost" onclick="closeModal()">Đóng</button>
+    </div>
+  `, true);
+}
+function deleteXuat(id){
+  const p = state.outbound.find(x=>x.id===id);
+  if(!p) return;
+  const khoXuatTonTai = state.warehouses.some(k=>k.ma===p.maKhoXuat);
+  const khoNhanTonTai = p.maKhoNhan ? state.warehouses.some(k=>k.ma===p.maKhoNhan) : true;
+  if(p.loai==='chuyen_kho' && khoNhanTonTai){
+    for(const r of p.items){
+      const projected = getStock(p.maKhoNhan, r.maHang) - r.soLuong;
+      if(projected < -1e-9){
+        toast(`Không thể xóa: "${r.maHang}" tại kho ${p.maKhoNhan} sẽ bị âm tồn kho (số lượng đã được xuất dùng ở phiếu khác). Vui lòng kiểm tra/điều chỉnh các phiếu liên quan trước.`, 'error');
+        return;
+      }
+    }
+  }
+  if(!confirm(`Xóa phiếu ${p.soPhieu}? Tồn kho sẽ được hoàn tác tương ứng.`)) return;
+  if(p.loai==='kiem_kho'){
+    if(khoXuatTonTai) p.items.forEach(r => setStock(p.maKhoXuat, r.maHang, r.tonSoSach));
+  }else{
+    p.items.forEach(r=>{
+      if(khoXuatTonTai) adjustStock(p.maKhoXuat, r.maHang, r.soLuong);
+      if(p.loai==='chuyen_kho' && khoNhanTonTai) adjustStock(p.maKhoNhan, r.maHang, -r.soLuong);
+    });
+  }
+  state.outbound = state.outbound.filter(x=>x.id!==id);
+  saveKey('outbound'); saveKey('stock');
+  toast((khoXuatTonTai && khoNhanTonTai) ? 'Đã xóa phiếu, tồn kho đã được hoàn tác' : 'Đã xóa phiếu (một số mã kho gốc không còn tồn tại nên không hoàn tác tồn kho ở đó)');
+  refreshAll();
+}
+
+function formatPrintDate(ngay){
+  const d = new Date(ngay);
+  if(isNaN(d)) return '';
+  const pad = n => String(n).padStart(2,'0');
+  return `${COMPANY_PROVINCE}, Ngày ${pad(d.getDate())} tháng ${pad(d.getMonth()+1)} năm ${d.getFullYear()}`;
+}
+function printPhieuXuat(id){
+  const p = state.outbound.find(x=>x.id===id);
+  if(!p) return;
+  if(p.loai==='kiem_kho'){ toast('Chức năng in áp dụng cho phiếu Xuất sản xuất / Xuất chuyển kho', 'error'); return; }
+
+  const isChuyenKho = p.loai==='chuyen_kho';
+  const khoNhanObj = isChuyenKho ? state.warehouses.find(k=>k.ma===p.maKhoNhan) : null;
+
+  let tongSoLuong = 0, tongTien = 0;
+  const rowsHtml = p.items.map((r,idx)=>{
+    const donGia = getLatestPurchasePrice(r.maHang);
+    const thanhTien = donGia * r.soLuong;
+    tongSoLuong += r.soLuong;
+    tongTien += thanhTien;
+    return `<tr>
+      <td style="text-align:center;">${idx+1}</td>
+      <td>${esc(r.maHang)}</td>
+      <td>${esc(r.ten)}</td>
+      <td style="text-align:center;">${esc(r.dvt||'')}</td>
+      <td style="text-align:right;">${fmtNum(r.soLuong)}</td>
+      <td style="text-align:right;">${donGia?fmtNum(donGia):''}</td>
+      <td style="text-align:right;">${thanhTien?fmtNum(thanhTien):''}</td>
+    </tr>`;
+  }).join('');
+
+  const nguoiNhanLabel = isChuyenKho ? 'Chuyển đến kho' : 'Họ và tên người nhận';
+  const nguoiNhanValue = isChuyenKho ? (khoNhanObj?khoNhanObj.ten:p.maKhoNhan) : (p.nguoiNhanHang||'');
+  const boPhanValue = isChuyenKho ? p.maKhoXuat : (p.boPhanNhan||'');
+  const lyDoXuat = p.ghiChu || (isChuyenKho ? 'Chuyển kho nội bộ' : 'Xuất sản xuất');
+
+  document.getElementById('print-area').innerHTML = `
+    <div class="print-doc">
+      <div class="print-company">${esc(COMPANY_NAME)}</div>
+      <div class="print-address">${esc(COMPANY_ADDRESS)}</div>
+      <div class="print-date">${formatPrintDate(p.ngay)}</div>
+      <div class="print-title">PHIẾU XUẤT KHO</div>
+      <div class="print-subtitle">Phiếu số: ${esc(p.soPhieu)}</div>
+      <div class="print-info-row">
+        <div>${nguoiNhanLabel}: <b>${esc(nguoiNhanValue||'.......................................')}</b></div>
+        <div>Bộ phận: <b>${esc(boPhanValue||'.......................................')}</b></div>
+      </div>
+      <div class="print-info-row">
+        <div>Lý do xuất kho: <b>${esc(lyDoXuat)}</b></div>
+      </div>
+      <div class="print-table-wrap">
+      <table class="print-table">
+        <thead><tr>
+          <th style="width:5%;">TT</th><th style="width:14%;">Mã vật tư</th><th style="width:33%;">Tên vật tư</th>
+          <th style="width:10%;">Đơn vị tính</th><th style="width:10%;">Số lượng</th>
+          <th style="width:13%;">Đơn giá (VNĐ)</th><th style="width:15%;">Thành tiền (VNĐ)</th>
+        </tr></thead>
+        <tbody>
+          ${rowsHtml}
+          <tr>
+            <td colspan="2"></td>
+            <td><b>Tổng cộng (VNĐ):</b></td>
+            <td></td>
+            <td style="text-align:right;"><b>${fmtNum(tongSoLuong)}</b></td>
+            <td></td>
+            <td style="text-align:right;"><b>${tongTien?fmtNum(tongTien):'-'}</b></td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="print-signatures">
+        <div>Người lập</div>
+        <div>Người nhận</div>
+        <div>Người duyệt</div>
+      </div>
+      <div class="print-signatures print-signature-names">
+        <div>${esc(p.nguoiTao||'')}</div>
+        <div>${esc(isChuyenKho?'':(p.nguoiNhanHang||''))}</div>
+        <div></div>
+      </div>
+    </div>
+  `;
+  window.print();
+}
+
+function formatPrintDateLower(ngay){
+  const d = new Date(ngay);
+  if(isNaN(d)) return '';
+  const pad = n => String(n).padStart(2,'0');
+  return `${COMPANY_PROVINCE}, ngày ${pad(d.getDate())} tháng ${pad(d.getMonth()+1)} năm ${d.getFullYear()}`;
+}
+function printPhieuNhap(id){
+  const p = state.inbound.find(x=>x.id===id);
+  if(!p) return;
+  const kho = state.warehouses.find(k=>k.ma===p.maKho);
+  const isMua = p.loai==='mua';
+
+  let tongSoLuong = 0, tongTien = 0;
+  const rowsHtml = p.items.map((r,idx)=>{
+    const donGia = isMua ? r.donGia : 0;
+    const thanhTien = isMua ? r.soLuong*r.donGia : 0;
+    tongSoLuong += r.soLuong;
+    tongTien += thanhTien;
+    return `<tr>
+      <td style="text-align:center;">${idx+1}</td>
+      <td>${esc(r.maHang)}</td>
+      <td>${esc(r.ten)}</td>
+      <td style="text-align:center;">${esc(r.dvt||'')}</td>
+      <td style="text-align:right;">${fmtNum(r.soLuong)}</td>
+      <td style="text-align:right;">${donGia?fmtNum(donGia):''}</td>
+      <td style="text-align:right;">${thanhTien?fmtNum(thanhTien):''}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('print-area').innerHTML = `
+    <div class="print-doc">
+      <div class="print-company">${esc(COMPANY_NAME)}</div>
+      <div class="print-address">${esc(COMPANY_ADDRESS)}</div>
+      <div class="print-date">${formatPrintDateLower(p.ngay)}</div>
+      <div class="print-title">PHIẾU NHẬP KHO</div>
+      <div class="print-subtitle">Phiếu số: ${esc(p.soPhieu)}</div>
+      <div class="print-info-row">
+        <div>Họ và tên người giao hàng: <b>${esc(p.nguoiGiaoHang||p.nhaCungCap||'.......................................')}</b></div>
+      </div>
+      ${isMua && (p.soHoaDon||p.ngayHoaDon) ? `<div class="print-info-row"><div>Theo hóa đơn số: <b>${esc(p.soHoaDon||'...........')}</b> ngày <b>${p.ngayHoaDon?esc(fmtDDMMYYYY(p.ngayHoaDon)):'.........'}</b></div></div>` : ''}
+      <div class="print-info-row">
+        <div>Nhập tại kho: <b>${esc(kho?kho.ten:p.maKho)}</b></div>
+        <div>Địa chỉ: <b>${esc((kho&&kho.diaChi)||COMPANY_ADDRESS)}</b></div>
+      </div>
+      <div class="print-table-wrap">
+      <table class="print-table">
+        <thead><tr>
+          <th style="width:5%;">TT</th><th style="width:14%;">Mã vật tư</th><th style="width:33%;">Tên vật tư</th>
+          <th style="width:10%;">Đơn vị tính</th><th style="width:10%;">Số lượng</th>
+          <th style="width:13%;">Đơn giá (VNĐ)</th><th style="width:15%;">Thành tiền (VNĐ)</th>
+        </tr></thead>
+        <tbody>
+          ${rowsHtml}
+          <tr>
+            <td colspan="2"></td>
+            <td><b>Tổng cộng (VNĐ):</b></td>
+            <td></td>
+            <td style="text-align:right;"><b>${fmtNum(tongSoLuong)}</b></td>
+            <td></td>
+            <td style="text-align:right;"><b>${tongTien?fmtNum(tongTien):'-'}</b></td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="print-signatures">
+        <div>Người lập phiếu<br><span class="print-sign-sub">(Ký, họ tên)</span></div>
+        <div>Người giao hàng<br><span class="print-sign-sub">(Ký, họ tên)</span></div>
+        <div>Thủ kho<br><span class="print-sign-sub">(Ký, họ tên)</span></div>
+        <div>Kế toán trưởng<br><span class="print-sign-sub">(Ký, họ tên)</span></div>
+      </div>
+      <div class="print-signatures print-signature-names">
+        <div>${esc(p.nguoiTao||'')}</div>
+        <div>${esc(p.nguoiGiaoHang||'')}</div>
+        <div></div>
+        <div></div>
+      </div>
+    </div>
+  `;
+  window.print();
+}
+
+/* =====================================================================
+   MODULE: ĐỀ XUẤT MUA VẬT TƯ
+===================================================================== */
+const DX_PAGE_SIZE = 20;
+let dxPage = 1;
+let dxExpanded = new Set();
+const DX_TRANGTHAI_LABEL = { cho_duyet: 'Chờ duyệt', da_duyet: 'Đã duyệt', tu_choi: 'Từ chối' };
+const DX_TRANGTHAI_PILL = { cho_duyet: 'pill-amber', da_duyet: 'pill-green', tu_choi: 'pill-red' };
+function dxGoToPage(delta){ dxPage += delta; renderDeXuat(); }
+function toggleDxExpand(id){
+  if(dxExpanded.has(id)) dxExpanded.delete(id); else dxExpanded.add(id);
+  renderDeXuat();
+}
+function getFilteredDeXuatList(){
+  const trangThai = document.getElementById('dx-filter-trangthai').value;
+  const qVatTu = (document.getElementById('dx-search-vattu').value||'').trim().toLowerCase();
+  const tuNgay = document.getElementById('dx-tu-ngay').value;
+  const denNgay = document.getElementById('dx-den-ngay').value;
+  let list = state.dexuat.slice().sort((a,b)=>b.createdAt-a.createdAt);
+  if(trangThai) list = list.filter(p=>p.trangThai===trangThai);
+  if(qVatTu) list = list.filter(p=>p.items.some(r=>((r.maHang||'')+' '+r.ten).toLowerCase().includes(qVatTu)));
+  if(tuNgay) list = list.filter(p=>p.ngay && p.ngay.slice(0,10) >= tuNgay);
+  if(denNgay) list = list.filter(p=>p.ngay && p.ngay.slice(0,10) <= denNgay);
+  return list;
+}
+function renderDeXuat(){
+  const tbody = document.getElementById('dexuat-tbody');
+  const pagerEl = document.getElementById('dx-pagination');
+  const list = getFilteredDeXuatList();
+  if(list.length===0){
+    const emptyMsg = state.dexuat.length===0
+      ? 'Chưa có phiếu đề xuất mua vật tư nào.'
+      : 'Không có phiếu nào phù hợp với bộ lọc hiện tại.';
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="7">${emptyMsg}</td></tr>`;
+    pagerEl.innerHTML = '';
+    return;
+  }
+  const totalPages = Math.max(1, Math.ceil(list.length / DX_PAGE_SIZE));
+  if(dxPage > totalPages) dxPage = totalPages;
+  if(dxPage < 1) dxPage = 1;
+  const pageList = list.slice((dxPage-1)*DX_PAGE_SIZE, (dxPage-1)*DX_PAGE_SIZE + DX_PAGE_SIZE);
+
+  tbody.innerHTML = pageList.map(p=>{
+    const expanded = dxExpanded.has(p.id);
+    const mainRow = `<tr>
+      <td class="center"><button class="icon-btn" title="${expanded?'Thu gọn':'Xem chi tiết vật tư'}" onclick="toggleDxExpand('${p.id}')">${expanded?'▾':'▸'}</button></td>
+      <td><span class="tag-code">${esc(p.soPhieu)}</span></td>
+      <td class="nowrap">${fmtDate(p.ngay)}</td>
+      <td>${esc(p.nguoiDeXuat||'—')}</td>
+      <td>${esc(p.boPhan||'—')}</td>
+      <td><span class="pill ${DX_TRANGTHAI_PILL[p.trangThai]}">${DX_TRANGTHAI_LABEL[p.trangThai]}</span></td>
+      <td class="center nowrap">
+        <button class="icon-btn" title="Sửa" onclick="openDeXuatForm('${p.id}')">✎</button>
+        <button class="icon-btn" title="Xem" onclick="viewDeXuatDetail('${p.id}')">👁</button>
+        <button class="icon-btn" title="In phiếu" onclick="printPhieuDeXuat('${p.id}')">🖨️</button>
+        ${p.trangThai==='da_duyet'?`<button class="icon-btn" title="Tạo phiếu nhập kho từ đề xuất này" onclick="createNhapFromDeXuat('${p.id}')" style="color:var(--accent);border-color:var(--accent);">📥</button>`:''}
+        <button class="icon-btn danger" title="Xóa" onclick="deleteDeXuat('${p.id}')">🗑</button>
+      </td>
+    </tr>`;
+    const detailRow = !expanded ? '' : `<tr class="nk-detail-row">
+      <td></td>
+      <td colspan="6" style="background:#FAFBFC;padding:10px 14px 16px;">
+        <table style="width:100%;border-collapse:collapse;">
+          <thead><tr>
+            <th style="font-size:10.5px;text-transform:uppercase;color:var(--text-muted);text-align:left;padding:5px 8px;border-bottom:1px solid var(--border);">Mã vật tư</th>
+            <th style="font-size:10.5px;text-transform:uppercase;color:var(--text-muted);text-align:left;padding:5px 8px;border-bottom:1px solid var(--border);">Tên vật tư</th>
+            <th style="font-size:10.5px;text-transform:uppercase;color:var(--text-muted);text-align:left;padding:5px 8px;border-bottom:1px solid var(--border);">ĐVT</th>
+            <th style="font-size:10.5px;text-transform:uppercase;color:var(--text-muted);text-align:right;padding:5px 8px;border-bottom:1px solid var(--border);">Số lượng</th>
+            <th style="font-size:10.5px;text-transform:uppercase;color:var(--text-muted);text-align:right;padding:5px 8px;border-bottom:1px solid var(--border);">Đơn giá dự kiến</th>
+          </tr></thead>
+          <tbody>
+            ${p.items.map(r=>`<tr>
+              <td style="padding:5px 8px;border-bottom:1px solid #EEF1F4;">${r.maHang?`<span class="tag-code">${esc(r.maHang)}</span>`:'<span style="color:var(--text-faint)">— vật tư mới —</span>'}</td>
+              <td style="padding:5px 8px;border-bottom:1px solid #EEF1F4;">${esc(r.ten)}</td>
+              <td style="padding:5px 8px;border-bottom:1px solid #EEF1F4;">${esc(r.dvt||'')}</td>
+              <td style="padding:5px 8px;border-bottom:1px solid #EEF1F4;text-align:right;">${fmtNum(r.soLuong)}</td>
+              <td style="padding:5px 8px;border-bottom:1px solid #EEF1F4;text-align:right;">${r.donGia?fmtMoney(r.donGia):'—'}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+        ${p.lyDoDeXuat?`<div style="margin-top:8px;font-size:12px;color:var(--text-muted);"><b>Lý do đề xuất:</b> ${esc(p.lyDoDeXuat)}</div>`:''}
+        ${p.ghiChu?`<div style="margin-top:4px;font-size:12px;color:var(--text-muted);"><b>Ghi chú:</b> ${esc(p.ghiChu)}</div>`:''}
+      </td>
+    </tr>`;
+    return mainRow + detailRow;
+  }).join('');
+
+  const fromIdx = (dxPage-1)*DX_PAGE_SIZE + 1;
+  const toIdx = (dxPage-1)*DX_PAGE_SIZE + pageList.length;
+  pagerEl.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <span style="font-size:12px;color:var(--text-muted);">Hiển thị ${fromIdx}–${toIdx} trong tổng số ${list.length} phiếu</span>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-ghost btn-sm" onclick="dxGoToPage(-1)" ${dxPage<=1?'disabled':''}>‹ Trước</button>
+        <span style="font-size:12.5px;color:var(--text-muted);">Trang ${dxPage}/${totalPages}</span>
+        <button class="btn btn-ghost btn-sm" onclick="dxGoToPage(1)" ${dxPage>=totalPages?'disabled':''}>Sau ›</button>
+      </div>
+    </div>`;
+}
+document.getElementById('dx-filter-trangthai').addEventListener('change', ()=>{ dxPage=1; renderDeXuat(); });
+document.getElementById('dx-search-vattu').addEventListener('input', ()=>{ dxPage=1; renderDeXuat(); });
+document.getElementById('dx-tu-ngay').addEventListener('change', ()=>{ dxPage=1; renderDeXuat(); });
+document.getElementById('dx-den-ngay').addEventListener('change', ()=>{ dxPage=1; renderDeXuat(); });
+document.getElementById('btn-add-dexuat').addEventListener('click', ()=>openDeXuatForm());
+
+function vatTuNameOptions(){
+  return state.items.slice().sort((a,b)=>a.ten.localeCompare(b.ten)).map(i=>`<option value="${esc(i.ten)}">`).join('');
+}
+function buildDxItemRow(rowData){
+  const id = genId();
+  const maHang = rowData ? (rowData.maHang||'') : '';
+  const ten = rowData ? (rowData.ten||'') : '';
+  const dvt = rowData ? (rowData.dvt||'') : '';
+  const soLuong = rowData ? rowData.soLuong : '';
+  const donGia = rowData ? (rowData.donGia||'') : '';
+  return `<tr data-row-id="${id}">
+    <td><input type="text" class="dx-row-mahang" list="dl-dx-mahang" value="${esc(maHang)}" placeholder="Mã (nếu có)" oninput="onDxRowMaHangInput(this)"></td>
+    <td><input type="text" class="dx-row-ten" list="dl-dx-ten" value="${esc(ten)}" placeholder="Tên vật tư" oninput="onDxRowTenInput(this)"></td>
+    <td><input type="text" class="dx-row-dvt" value="${esc(dvt)}" placeholder="ĐVT"></td>
+    <td><input type="number" class="dx-row-soluong" min="0" step="any" value="${soLuong}"></td>
+    <td><input type="number" class="dx-row-dongia" min="0" step="any" value="${donGia}" placeholder="Không bắt buộc"></td>
+    <td><button type="button" class="row-remove" onclick="this.closest('tr').remove();">✕</button></td>
+  </tr>`;
+}
+function onDxRowMaHangInput(input){
+  const ma = input.value.trim();
+  const found = state.items.find(i=>i.ma.toLowerCase()===ma.toLowerCase());
+  if(found){
+    const tr = input.closest('tr');
+    tr.querySelector('.dx-row-ten').value = found.ten;
+    tr.querySelector('.dx-row-dvt').value = found.dvt||'';
+    const dongiaInput = tr.querySelector('.dx-row-dongia');
+    if(!dongiaInput.value.trim()){
+      const giaGanNhat = getLatestPurchasePrice(found.ma);
+      if(giaGanNhat) dongiaInput.value = giaGanNhat;
+    }
+  }
+}
+function onDxRowTenInput(input){
+  const ten = input.value.trim();
+  const found = state.items.find(i=>i.ten.toLowerCase()===ten.toLowerCase());
+  if(found){
+    const tr = input.closest('tr');
+    if(!tr.querySelector('.dx-row-mahang').value.trim()) tr.querySelector('.dx-row-mahang').value = found.ma;
+    if(!tr.querySelector('.dx-row-dvt').value.trim()) tr.querySelector('.dx-row-dvt').value = found.dvt||'';
+    const dongiaInput = tr.querySelector('.dx-row-dongia');
+    if(!dongiaInput.value.trim()){
+      const giaGanNhat = getLatestPurchasePrice(found.ma);
+      if(giaGanNhat) dongiaInput.value = giaGanNhat;
+    }
+  }
+}
+function addDxItemRow(){
+  document.getElementById('dx-items-editor-body').insertAdjacentHTML('beforeend', buildDxItemRow(null));
+}
+function collectDxItemRows(){
+  const rows = [];
+  document.querySelectorAll('#dx-items-editor-body tr').forEach(tr=>{
+    const ten = tr.querySelector('.dx-row-ten').value.trim();
+    const soLuong = Number(tr.querySelector('.dx-row-soluong').value)||0;
+    if(ten && soLuong>0){
+      rows.push({
+        maHang: tr.querySelector('.dx-row-mahang').value.trim(),
+        ten,
+        dvt: tr.querySelector('.dx-row-dvt').value.trim(),
+        soLuong,
+        donGia: Number(tr.querySelector('.dx-row-dongia').value)||0
+      });
+    }
+  });
+  return rows;
+}
+function openDeXuatForm(editId){
+  const editingPhieu = editId ? state.dexuat.find(p=>p.id===editId) : null;
+  const boPhanList = [...new Set(state.outbound.filter(p=>p.loai==='san_xuat').map(p=>p.boPhanNhan).filter(Boolean))];
+  const itemRowsHtml = editingPhieu ? editingPhieu.items.map(r=>buildDxItemRow(r)).join('') : buildDxItemRow(null);
+  openModal(`
+    <div class="modal-head"><h3>${editingPhieu?'Sửa phiếu đề xuất mua vật tư':'Tạo phiếu đề xuất mua vật tư'}${editingPhieu?` <span class="tag-code">${esc(editingPhieu.soPhieu)}</span>`:''}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label>Ngày đề xuất *</label><input id="f-ngay" type="datetime-local" value="${editingPhieu?editingPhieu.ngay:nowDateTimeLocal()}"></div>
+        <div class="form-group"><label>Trạng thái</label>
+          <select id="f-trangthai">
+            <option value="cho_duyet" ${(!editingPhieu||editingPhieu.trangThai==='cho_duyet')?'selected':''}>Chờ duyệt</option>
+            <option value="da_duyet" ${editingPhieu&&editingPhieu.trangThai==='da_duyet'?'selected':''}>Đã duyệt</option>
+            <option value="tu_choi" ${editingPhieu&&editingPhieu.trangThai==='tu_choi'?'selected':''}>Từ chối</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Họ và tên người đề xuất *</label><input id="f-nguoidexuat" type="text" value="${editingPhieu?esc(editingPhieu.nguoiDeXuat||''):esc((currentUser&&currentUser.hoTen)||'')}" placeholder="Tên người đề xuất"></div>
+        <div class="form-group"><label>Bộ phận</label><input id="f-bophan" list="dl-bophan" type="text" value="${editingPhieu?esc(editingPhieu.boPhan||''):''}" placeholder="VD: Kỹ thuật"><datalist id="dl-bophan">${boPhanList.map(b=>`<option value="${esc(b)}">`).join('')}</datalist></div>
+        <div class="form-group full"><label>Lý do đề xuất</label><input id="f-lydo" type="text" value="${editingPhieu?esc(editingPhieu.lyDoDeXuat||''):''}" placeholder="VD: Phục vụ sản xuất"></div>
+        <div class="form-group"><label>Người lập phiếu</label><input id="f-nguoi" type="text" value="${editingPhieu?esc(editingPhieu.nguoiTao||''):esc((currentUser&&currentUser.hoTen)||state.lastUser||'')}" placeholder="Tên người tạo phiếu"></div>
+      </div>
+      <div class="section-title" style="margin-top:16px;">Danh sách vật tư đề xuất mua</div>
+      <div class="help-banner">Vật tư có thể chọn theo mã đã có trong danh mục, hoặc gõ tên vật tư hoàn toàn mới (chưa có trong "Quản lý mã hàng") — hệ thống sẽ gợi ý tự động nếu trùng mã/tên đã tồn tại.</div>
+      <datalist id="dl-dx-mahang">${state.items.map(i=>`<option value="${esc(i.ma)}">`).join('')}</datalist>
+      <datalist id="dl-dx-ten">${vatTuNameOptions()}</datalist>
+      <table class="items-editor">
+        <thead><tr><th style="width:16%">Mã vật tư</th><th style="width:30%">Tên vật tư</th><th style="width:12%">ĐVT</th><th style="width:14%">Số lượng</th><th style="width:20%">Đơn giá dự kiến</th><th style="width:8%"></th></tr></thead>
+        <tbody id="dx-items-editor-body">${itemRowsHtml}</tbody>
+      </table>
+      <button type="button" class="btn btn-ghost btn-sm add-row-btn" onclick="addDxItemRow()">+ Thêm dòng</button>
+      <div class="form-group full" style="margin-top:14px;"><label>Ghi chú</label><textarea id="f-note" placeholder="Ghi chú thêm (không bắt buộc)">${editingPhieu?esc(editingPhieu.ghiChu||''):''}</textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Hủy</button>
+      <button class="btn btn-primary" onclick="saveDeXuat(${editingPhieu?`'${editingPhieu.id}'`:'null'})">${editingPhieu?'Cập nhật phiếu đề xuất':'Lưu phiếu đề xuất'}</button>
+    </div>
+  `);
+}
+function saveDeXuat(editId){
+  const ngay = document.getElementById('f-ngay').value;
+  const trangThai = document.getElementById('f-trangthai').value;
+  const nguoiDeXuat = document.getElementById('f-nguoidexuat').value.trim();
+  const boPhan = document.getElementById('f-bophan').value.trim();
+  const lyDoDeXuat = document.getElementById('f-lydo').value.trim();
+  const nguoi = document.getElementById('f-nguoi').value.trim();
+  const ghiChu = document.getElementById('f-note').value.trim();
+  if(!ngay){ toast('Vui lòng chọn ngày đề xuất', 'error'); return; }
+  if(!nguoiDeXuat){ toast('Vui lòng nhập họ và tên người đề xuất', 'error'); return; }
+  const items = collectDxItemRows();
+  if(items.length===0){ toast('Vui lòng thêm ít nhất 1 dòng vật tư hợp lệ (có tên và số lượng)', 'error'); return; }
+
+  const editingPhieu = editId ? state.dexuat.find(p=>p.id===editId) : null;
+  if(editingPhieu){
+    Object.assign(editingPhieu, { ngay, trangThai, nguoiDeXuat, boPhan, lyDoDeXuat, nguoiTao: nguoi, ghiChu, items });
+    toast('Đã cập nhật phiếu đề xuất ' + editingPhieu.soPhieu, 'success');
+  }else{
+    const phieu = { id: genId(), soPhieu: genSoPhieu('DX'), ngay, trangThai, nguoiDeXuat, boPhan, lyDoDeXuat, nguoiTao: nguoi, ghiChu, items, createdAt: Date.now() };
+    state.dexuat.push(phieu);
+    toast('Đã lưu phiếu đề xuất ' + phieu.soPhieu, 'success');
+  }
+  state.lastUser = nguoi;
+  saveKey('dexuat'); saveKey('lastUser');
+  closeModal();
+  refreshAll();
+}
+function viewDeXuatDetail(id){
+  const p = state.dexuat.find(x=>x.id===id);
+  if(!p) return;
+  openModal(`
+    <div class="modal-head"><h3>Phiếu đề xuất ${esc(p.soPhieu)}</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="modal-body">
+      <div class="detail-grid">
+        <div><div class="dt-lbl">Ngày đề xuất</div><div class="dt-val">${fmtDate(p.ngay)}</div></div>
+        <div><div class="dt-lbl">Trạng thái</div><div class="dt-val"><span class="pill ${DX_TRANGTHAI_PILL[p.trangThai]}">${DX_TRANGTHAI_LABEL[p.trangThai]}</span></div></div>
+        <div><div class="dt-lbl">Người đề xuất</div><div class="dt-val">${esc(p.nguoiDeXuat||'—')}</div></div>
+        <div><div class="dt-lbl">Bộ phận</div><div class="dt-val">${esc(p.boPhan||'—')}</div></div>
+        <div><div class="dt-lbl">Lý do đề xuất</div><div class="dt-val">${esc(p.lyDoDeXuat||'—')}</div></div>
+        <div><div class="dt-lbl">Người lập phiếu</div><div class="dt-val">${esc(p.nguoiTao||'—')}</div></div>
+        <div><div class="dt-lbl">Ghi chú</div><div class="dt-val">${esc(p.ghiChu||'—')}</div></div>
+      </div>
+      <table>
+        <thead><tr><th>Mã vật tư</th><th>Tên vật tư</th><th>ĐVT</th><th class="right">SL</th><th class="right">Đơn giá dự kiến</th></tr></thead>
+        <tbody>
+        ${p.items.map(r=>`<tr><td>${r.maHang?`<span class="tag-code">${esc(r.maHang)}</span>`:'—'}</td><td>${esc(r.ten)}</td><td>${esc(r.dvt||'')}</td><td class="right">${fmtNum(r.soLuong)}</td><td class="right">${r.donGia?fmtMoney(r.donGia):'—'}</td></tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+    <div class="modal-foot">
+      ${p.trangThai==='cho_duyet'?`<button class="btn btn-danger-ghost" onclick="setDeXuatTrangThai('${p.id}','tu_choi')">✕ Từ chối</button><button class="btn btn-primary" onclick="setDeXuatTrangThai('${p.id}','da_duyet')">✓ Duyệt</button>`:''}
+      ${p.trangThai==='da_duyet'?`<button class="btn btn-accent" onclick="createNhapFromDeXuat('${p.id}')">📥 Tạo phiếu nhập kho</button>`:''}
+      <button class="btn btn-ghost" onclick="printPhieuDeXuat('${p.id}')">🖨️ In phiếu</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Đóng</button>
+    </div>
+  `, true);
+}
+function setDeXuatTrangThai(id, trangThai){
+  const p = state.dexuat.find(x=>x.id===id);
+  if(!p) return;
+  p.trangThai = trangThai;
+  saveKey('dexuat');
+  toast(`Đã cập nhật trạng thái phiếu ${p.soPhieu} thành "${DX_TRANGTHAI_LABEL[trangThai]}"`, 'success');
+  closeModal();
+  refreshAll();
+}
+function deleteDeXuat(id){
+  const p = state.dexuat.find(x=>x.id===id);
+  if(!p) return;
+  if(!confirm(`Xóa phiếu đề xuất ${p.soPhieu}?`)) return;
+  state.dexuat = state.dexuat.filter(x=>x.id!==id);
+  saveKey('dexuat');
+  toast('Đã xóa phiếu đề xuất');
+  refreshAll();
+}
+function createNhapFromDeXuat(id){
+  const dx = state.dexuat.find(x=>x.id===id);
+  if(!dx) return;
+  if(dx.trangThai!=='da_duyet'){ toast('Chỉ có thể tạo phiếu nhập kho từ đề xuất đã được duyệt', 'error'); return; }
+  if(state.warehouses.length===0){ toast('Vui lòng tạo ít nhất 1 kho trước khi nhập kho', 'error'); if(canAccess('kho')) switchView('kho'); return; }
+
+  const matched = [], unmatched = [];
+  dx.items.forEach(it=>{
+    const found = (it.maHang && state.items.find(i=>i.ma.toLowerCase()===it.maHang.toLowerCase()))
+      || state.items.find(i=>i.ten.toLowerCase()===it.ten.toLowerCase());
+    if(found) matched.push({maHang: found.ma, soLuong: it.soLuong, donGia: it.donGia||0});
+    else unmatched.push(it);
+  });
+  if(matched.length===0){
+    toast('Không có vật tư nào trong đề xuất khớp với danh mục "Quản lý mã hàng" hiện có. Vui lòng khai báo mã hàng trước.', 'error');
+    if(canAccess('mahang')) switchView('mahang');
+    return;
+  }
+
+  closeModal();
+  openNhapForm();
+  const body = document.getElementById('items-editor-body');
+  body.innerHTML = matched.map(m => buildItemRow(m, true)).join('');
+  recalcGrandTotal();
+  if(unmatched.length>0){
+    toast(`${unmatched.length} vật tư trong đề xuất chưa có trong danh mục Mã hàng nên chưa được thêm vào phiếu: ${unmatched.map(u=>u.ten).join(', ')}. Vui lòng khai báo mã hàng rồi thêm dòng thủ công.`, 'error');
+  }else{
+    toast('Đã điền sẵn vật tư từ phiếu đề xuất, vui lòng chọn kho nhập và kiểm tra lại trước khi lưu', 'success');
+  }
+}
+function printPhieuDeXuat(id){
+  const p = state.dexuat.find(x=>x.id===id);
+  if(!p) return;
+
+  let tongSoLuong = 0, tongTien = 0;
+  const rowsHtml = p.items.map((r,idx)=>{
+    const thanhTien = (r.donGia||0) * r.soLuong;
+    tongSoLuong += r.soLuong;
+    tongTien += thanhTien;
+    return `<tr>
+      <td style="text-align:center;">${idx+1}</td>
+      <td>${esc(r.maHang||'')}</td>
+      <td>${esc(r.ten)}</td>
+      <td style="text-align:center;">${esc(r.dvt||'')}</td>
+      <td style="text-align:right;">${fmtNum(r.soLuong)}</td>
+      <td style="text-align:right;">${r.donGia?fmtNum(r.donGia):''}</td>
+      <td style="text-align:right;">${thanhTien?fmtNum(thanhTien):''}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('print-area').innerHTML = `
+    <div class="print-doc">
+      <div class="print-company">${esc(COMPANY_NAME)}</div>
+      <div class="print-address">${esc(COMPANY_ADDRESS)}</div>
+      <div class="print-date">${formatPrintDateLower(p.ngay)}</div>
+      <div class="print-title">PHIẾU ĐỀ XUẤT MUA VẬT TƯ</div>
+      <div class="print-subtitle">Phiếu số: ${esc(p.soPhieu)}</div>
+      <div class="print-info-row">
+        <div>Họ và tên người đề xuất: <b>${esc(p.nguoiDeXuat||'.......................................')}</b></div>
+      </div>
+      <div class="print-info-row">
+        <div>Lý do đề xuất: <b>${esc(p.lyDoDeXuat||'—')}</b></div>
+        <div>Bộ phận: <b>${esc(p.boPhan||'—')}</b></div>
+      </div>
+      <div class="print-table-wrap">
+      <table class="print-table">
+        <thead><tr>
+          <th style="width:5%;">TT</th><th style="width:14%;">Mã vật tư</th><th style="width:33%;">Tên vật tư</th>
+          <th style="width:10%;">Đơn vị tính</th><th style="width:10%;">Số lượng</th>
+          <th style="width:13%;">Đơn giá (VNĐ)</th><th style="width:15%;">Thành tiền (VNĐ)</th>
+        </tr></thead>
+        <tbody>
+          ${rowsHtml}
+          <tr>
+            <td colspan="2"></td>
+            <td><b>Tổng cộng (VNĐ):</b></td>
+            <td></td>
+            <td style="text-align:right;"><b>${fmtNum(tongSoLuong)}</b></td>
+            <td></td>
+            <td style="text-align:right;"><b>${tongTien?fmtNum(tongTien):'-'}</b></td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="print-signatures">
+        <div>Người lập phiếu<br><span class="print-sign-sub">(Ký, họ tên)</span></div>
+        <div>Người đề nghị<br><span class="print-sign-sub">(Ký, họ tên)</span></div>
+        <div>Người kiểm tra<br><span class="print-sign-sub">(Ký, họ tên)</span></div>
+        <div>Giám đốc<br><span class="print-sign-sub">(Ký, họ tên)</span></div>
+      </div>
+      <div class="print-signatures print-signature-names">
+        <div>${esc(p.nguoiTao||'')}</div>
+        <div>${esc(p.nguoiDeXuat||'')}</div>
+        <div></div>
+        <div></div>
+      </div>
+    </div>
+  `;
+  window.print();
+}
+
+/* =====================================================================
+   MODULE 5: TỒN KHO / TỔNG QUAN
+===================================================================== */
+const TK_PAGE_SIZE = 20;
+let tkPage = 1;
+
+function getLatestPurchasePrice(maHang){
+  let best = null; // {donGia, ngayTs, createdAt}
+  state.inbound.forEach(p=>{
+    if(p.loai !== 'mua') return;
+    const ngayTs = (p.ngay && new Date(p.ngay).getTime()) || 0;
+    const createdAt = p.createdAt || 0;
+    p.items.forEach(r=>{
+      if(r.maHang === maHang && r.donGia > 0){
+        const isBetter = !best || ngayTs > best.ngayTs || (ngayTs === best.ngayTs && createdAt > best.createdAt);
+        if(isBetter) best = { donGia: r.donGia, ngayTs, createdAt };
+      }
+    });
+  });
+  return best ? best.donGia : 0;
+}
+
+function tkGoToPage(delta){
+  tkPage += delta;
+  renderTonKho();
+}
+
+function renderTonKho(){
+  fillWarehouseSelects();
+  const kho = document.getElementById('tk-filter-kho').value;
+  const q = (document.getElementById('tk-search').value||'').trim().toLowerCase();
+  const onlyLow = document.getElementById('tk-only-low').checked;
+  const onlyNegative = document.getElementById('tk-only-negative').checked;
+
+  const khoSuffix = kho ? ` (${esc(kho)})` : '';
+  const khoFilteredItems = kho ? state.items.filter(i=>getStock(kho, i.ma) > 1e-9) : state.items;
+  let lowCount = 0;
+  khoFilteredItems.forEach(i=>{
+    const ton = kho ? getStock(kho, i.ma) : totalStockOfItem(i.ma);
+    if(i.tonToiThieu && ton < Number(i.tonToiThieu)) lowCount++;
+  });
+  const thisMonthPrefix = new Date().toISOString().slice(0,7);
+  const inThisMonth = state.inbound.filter(p=> p.ngay && p.ngay.slice(0,7)===thisMonthPrefix && (!kho || p.maKho===kho)).length;
+  const outThisMonth = state.outbound.filter(p=> p.ngay && p.ngay.slice(0,7)===thisMonthPrefix && (!kho || p.maKhoXuat===kho || p.maKhoNhan===kho)).length;
+  const tongGiaTriTonKho = khoFilteredItems.reduce((s,i)=>{
+    const ton = kho ? getStock(kho, i.ma) : totalStockOfItem(i.ma);
+    return s + ton * getLatestPurchasePrice(i.ma);
+  }, 0);
+
+  document.getElementById('tonkho-stats').innerHTML = `
+    <div class="stat-card"><div class="lbl">Mã hàng${khoSuffix}</div><div class="val">${khoFilteredItems.length}</div></div>
+    <div class="stat-card"><div class="lbl">Tổng giá trị tồn kho${khoSuffix}</div><div class="val" style="font-size:22px;">${fmtMoney(tongGiaTriTonKho)}</div></div>
+    <div class="stat-card ${lowCount>0?'warn':''}"><div class="lbl">Dưới mức tồn tối thiểu${khoSuffix}</div><div class="val">${lowCount}</div></div>
+    <div class="stat-card"><div class="lbl">Phiếu tháng này${khoSuffix}</div><div class="val">${inThisMonth+outThisMonth} <small>(${inThisMonth} nhập / ${outThisMonth} xuất)</small></div></div>
+  `;
+
+  const tbody = document.getElementById('tonkho-tbody');
+  const pagerEl = document.getElementById('tk-pagination');
+  let list = state.items.slice().sort((a,b)=>a.ma.localeCompare(b.ma));
+  if(q) list = list.filter(i=>(i.ma+' '+i.ten+' '+(i.model||'')).toLowerCase().includes(q));
+  const rows = list.map(i=>{
+    const ton = kho ? getStock(kho, i.ma) : totalStockOfItem(i.ma);
+    const low = i.tonToiThieu && ton < Number(i.tonToiThieu);
+    const negative = ton < -1e-9;
+    const donGia = getLatestPurchasePrice(i.ma);
+    const thanhTien = ton * donGia;
+    return {i, ton, low, negative, donGia, thanhTien};
+  }).filter(r => !kho || r.ton > 1e-9 || r.negative)
+    .filter(r => !onlyLow || r.low)
+    .filter(r => !onlyNegative || r.negative);
+
+  if(rows.length===0){
+    let emptyMsg = 'Không có dữ liệu phù hợp với bộ lọc hiện tại.';
+    if(state.items.length===0) emptyMsg = 'Chưa có mã hàng nào. Vào mục "Quản lý mã hàng" để bắt đầu.';
+    else if(onlyNegative) emptyMsg = '✅ Không có mã hàng nào bị âm tồn kho.';
+    else if(kho) emptyMsg = 'Kho này hiện chưa có mặt hàng nào tồn tại (hoặc không khớp bộ lọc).';
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="9">${emptyMsg}</td></tr>`;
+    pagerEl.innerHTML = '';
+    return;
+  }
+
+  const tongThanhTien = rows.reduce((s,r)=>s+r.thanhTien, 0);
+  const totalPages = Math.max(1, Math.ceil(rows.length / TK_PAGE_SIZE));
+  if(tkPage > totalPages) tkPage = totalPages;
+  if(tkPage < 1) tkPage = 1;
+  const pageRows = rows.slice((tkPage-1)*TK_PAGE_SIZE, (tkPage-1)*TK_PAGE_SIZE + TK_PAGE_SIZE);
+
+  const bodyRows = pageRows.map(({i,ton,low,negative,donGia,thanhTien})=>`
+    <tr>
+      <td><span class="tag-code">${esc(i.ma)}</span></td>
+      <td>${esc(i.ten)}</td>
+      <td style="max-width:200px;color:var(--text-muted);">${esc(i.model||'—')}</td>
+      <td>${i.nhom?`<span class="pill pill-blue">${esc(i.nhom)}</span>`:'—'}</td>
+      <td>${esc(i.dvt||'')}</td>
+      <td class="right">${i.tonToiThieu?fmtNum(i.tonToiThieu):'—'}</td>
+      <td class="right" style="font-weight:700;${(low||negative)?'color:var(--danger)':'color:var(--primary)'}">${fmtNum(ton)} ${negative?'<span class="pill pill-red" style="margin-left:6px;" title="Tồn kho bị âm — có thể do dữ liệu nhập/xuất chưa khớp, kiểm tra lại lịch sử phiếu hoặc tạo phiếu Kiểm kho để điều chỉnh">⚠ Âm</span>':(low?'<span class="pill pill-red" style="margin-left:6px;">Thấp</span>':'')}</td>
+      <td class="right">${donGia?fmtMoney(donGia):'—'}</td>
+      <td class="right">${donGia?fmtMoney(thanhTien):'—'}</td>
+    </tr>`).join('');
+
+  const totalRow = `
+    <tr style="background:#FAFBFC;font-weight:700;">
+      <td colspan="8" style="text-align:right;color:var(--primary);">Tổng cộng giá trị tồn kho (toàn bộ danh sách đã lọc)</td>
+      <td class="right" style="color:var(--primary);">${fmtMoney(tongThanhTien)}</td>
+    </tr>`;
+
+  tbody.innerHTML = bodyRows + totalRow;
+
+  const fromIdx = (tkPage-1)*TK_PAGE_SIZE + 1;
+  const toIdx = (tkPage-1)*TK_PAGE_SIZE + pageRows.length;
+  pagerEl.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <span style="font-size:12px;color:var(--text-muted);">Hiển thị ${fromIdx}–${toIdx} trong tổng số ${rows.length} mã hàng</span>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-ghost btn-sm" onclick="tkGoToPage(-1)" ${tkPage<=1?'disabled':''}>‹ Trước</button>
+        <span style="font-size:12.5px;color:var(--text-muted);">Trang ${tkPage}/${totalPages}</span>
+        <button class="btn btn-ghost btn-sm" onclick="tkGoToPage(1)" ${tkPage>=totalPages?'disabled':''}>Sau ›</button>
+      </div>
+    </div>`;
+}
+document.getElementById('tk-filter-kho').addEventListener('change', ()=>{ tkPage=1; renderTonKho(); });
+document.getElementById('tk-search').addEventListener('input', ()=>{ tkPage=1; renderTonKho(); });
+document.getElementById('tk-only-low').addEventListener('change', ()=>{ tkPage=1; renderTonKho(); });
+document.getElementById('tk-only-negative').addEventListener('change', ()=>{ tkPage=1; renderTonKho(); });
+
+/* =====================================================================
+   MODULE 6: LỊCH SỬ
+===================================================================== */
+function renderLichSu(){
+  fillWarehouseSelects();
+  const nhomloai = document.getElementById('ls-filter-nhomloai').value;
+  const kho = document.getElementById('ls-filter-kho').value;
+  const tuNgay = document.getElementById('ls-tu-ngay').value;
+  const denNgay = document.getElementById('ls-den-ngay').value;
+
+  let list = [];
+  if(nhomloai!=='xuat') state.inbound.forEach(p=>list.push({...p, _nhom:'nhap', _kho: p.maKho, _loaiLabel: p.loai==='mua'?'Nhập mua hàng':'Nhập trực tiếp'}));
+  if(nhomloai!=='nhap') state.outbound.forEach(p=>list.push({...p, _nhom:'xuat', _kho: p.maKhoXuat, _loaiLabel: XUAT_LOAI_LABEL[p.loai]}));
+
+  if(kho) list = list.filter(p=>p._kho===kho || p.maKhoNhan===kho);
+  if(tuNgay) list = list.filter(p=> p.ngay && p.ngay.slice(0,10) >= tuNgay);
+  if(denNgay) list = list.filter(p=> p.ngay && p.ngay.slice(0,10) <= denNgay);
+  list.sort((a,b)=>b.createdAt-a.createdAt);
+
+  const tbody = document.getElementById('lichsu-tbody');
+  if(list.length===0){
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="7">Không có phiếu nào phù hợp với bộ lọc.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map(p=>`
+    <tr>
+      <td><span class="tag-code">${esc(p.soPhieu)}</span></td>
+      <td class="nowrap">${fmtDate(p.ngay)}</td>
+      <td>${p._nhom==='nhap'?'<span class="pill pill-green">Nhập</span>':'<span class="pill pill-amber">Xuất</span>'}</td>
+      <td>${esc(p._loaiLabel)}</td>
+      <td>${esc(p._kho)}</td>
+      <td>${esc(p.nguoiTao||'—')}</td>
+      <td class="center"><button class="icon-btn" onclick="${p._nhom==='nhap'?`viewNhapDetail('${p.id}')`:`viewXuatDetail('${p.id}')`}">👁</button></td>
+    </tr>`).join('');
+}
+['ls-filter-nhomloai','ls-filter-kho','ls-tu-ngay','ls-den-ngay'].forEach(id=>{
+  document.getElementById(id).addEventListener('change', renderLichSu);
+});
+
+/* =====================================================================
+   BACKUP / RESTORE
+===================================================================== */
+document.getElementById('btn-export').addEventListener('click', ()=>{
+  const payload = { exportedAt: new Date().toISOString(), data: state };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `kho-vat-tu-backup-${todayISO()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Đã tải file sao lưu dữ liệu', 'success');
+});
+document.getElementById('btn-import').addEventListener('click', ()=> document.getElementById('import-file').click());
+document.getElementById('import-file').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    try{
+      const parsed = JSON.parse(ev.target.result);
+      const data = parsed.data || parsed;
+      if(!data.items || !data.warehouses){ throw new Error('invalid'); }
+      if(!confirm('Khôi phục sẽ GHI ĐÈ toàn bộ dữ liệu nghiệp vụ đang dùng CHUNG trên Firebase (áp dụng ngay cho tất cả người dùng đang kết nối). Không ảnh hưởng tài khoản đăng nhập. Tiếp tục?')) return;
+      DATA_KEYS.forEach(k=>{ state[k] = data[k]!==undefined ? data[k] : defaultForKey(k); });
+      saveAll();
+      toast('Đã khôi phục dữ liệu thành công', 'success');
+      refreshAll();
+    }catch(err){
+      toast('File không hợp lệ, không thể khôi phục', 'error');
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+});
+
+/* ============================= INIT ============================= */
+// Không cần gọi gì thêm ở đây: auth.onAuthStateChanged(...) đã được đăng ký ở phần AUTH phía
+// trên và sẽ tự kích hoạt ngay khi tải trang — tự động hiện màn hình đăng nhập hoặc tải dữ
+// liệu + vào thẳng ứng dụng nếu phiên đăng nhập Firebase vẫn còn hiệu lực.
+</script>
+</body>
+</html>
