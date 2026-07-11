@@ -896,13 +896,27 @@ function detachDataListeners(){
   db.ref('userProfiles').off();
 }
 function saveKey(k){
-  const val = state[k]===undefined ? defaultForKey(k) : state[k];
-  return db.ref(k).set(k==='stock' ? encodeStockForFirebase(val) : val).catch(err=>{
-    console.error('Lỗi ghi dữ liệu "'+k+'" lên Firebase:', err);
-    toast(`Lỗi khi lưu dữ liệu "${k}" lên Firebase: ${err&&err.message?err.message:'không rõ nguyên nhân'}`, 'error');
-  });
+  try{
+    const val = state[k]===undefined ? defaultForKey(k) : state[k];
+    const toWrite = k==='stock' ? encodeStockForFirebase(val) : val;
+    return db.ref(k).set(toWrite).catch(err=>{
+      console.error('Lỗi ghi dữ liệu "'+k+'" lên Firebase:', err);
+      toast(`Lỗi khi lưu dữ liệu "${k}" lên Firebase: ${err&&err.message?err.message:'không rõ nguyên nhân'}`, 'error');
+    });
+  }catch(err){
+    // Bắt cả lỗi XẢY RA NGAY (đồng bộ, VD khi chuẩn bị/mã hóa dữ liệu trước khi gửi đi) — nếu không
+    // bắt ở đây, một mục lỗi có thể làm dừng luôn việc ghi các mục còn lại phía sau nó.
+    console.error('Lỗi chuẩn bị dữ liệu "'+k+'" trước khi ghi lên Firebase:', err);
+    toast(`Lỗi khi chuẩn bị dữ liệu "${k}" để lưu lên Firebase: ${err&&err.message?err.message:'không rõ nguyên nhân'}`, 'error');
+    return Promise.resolve();
+  }
 }
-function saveAll(){ return Promise.all(DATA_KEYS.map(k=>saveKey(k))); }
+function saveAll(){
+  return Promise.all(DATA_KEYS.map(k=>{
+    try{ return saveKey(k); }
+    catch(err){ console.error(err); return Promise.resolve(); }
+  }));
+}
 
 function genId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
@@ -3356,8 +3370,11 @@ document.getElementById('import-file').addEventListener('change', (e)=>{
       return;
     }
     DATA_KEYS.forEach(k=>{ state[k] = data[k]!==undefined ? data[k] : defaultForKey(k); });
-    saveAll();
-    toast('Đã khôi phục dữ liệu thành công', 'success');
+    toast('Đang lưu dữ liệu lên Firebase, vui lòng chờ...', 'success');
+    saveAll().then(()=>{
+      toast('Đã khôi phục dữ liệu thành công', 'success');
+      refreshAll();
+    });
     refreshAll();
     e.target.value = '';
   };
