@@ -820,6 +820,41 @@ function defaultForKey(k){
   return [];
 }
 
+/* Firebase Realtime Database CẤM dùng các ký tự . # $ [ ] (và /) làm khóa (key) dữ liệu.
+   Đối tượng "stock" dùng trực tiếp Mã kho/Mã hàng làm khóa (VD stock['KHO TỔNG']['BOM-QY15-7.5']),
+   mà mã hàng thực tế có thể chứa dấu chấm (VD "QUAT-NUOC-2.2KW") — nếu ghi thẳng sẽ bị Firebase từ
+   chối. Nên mã hóa/giải mã CHỈ tại 2 điểm đọc/ghi Firebase bên dưới, còn state.stock trong bộ nhớ
+   vẫn giữ nguyên mã gốc để mọi logic nghiệp vụ khác không cần thay đổi gì. */
+function encodeFbKey(key){
+  return String(key)
+    .replace(/%/g,'%25').replace(/\./g,'%2E').replace(/#/g,'%23')
+    .replace(/\$/g,'%24').replace(/\[/g,'%5B').replace(/\]/g,'%5D').replace(/\//g,'%2F');
+}
+function decodeFbKey(key){
+  return String(key)
+    .replace(/%2E/g,'.').replace(/%23/g,'#').replace(/%24/g,'$')
+    .replace(/%5B/g,'[').replace(/%5D/g,']').replace(/%2F/g,'/').replace(/%25/g,'%');
+}
+function encodeStockForFirebase(stock){
+  const out = {};
+  for(const kho in stock){
+    const encKho = encodeFbKey(kho);
+    out[encKho] = {};
+    for(const ma in stock[kho]) out[encKho][encodeFbKey(ma)] = stock[kho][ma];
+  }
+  return out;
+}
+function decodeStockFromFirebase(raw){
+  const out = {};
+  if(!raw) return out;
+  for(const kho in raw){
+    const decKho = decodeFbKey(kho);
+    out[decKho] = {};
+    for(const ma in raw[kho]) out[decKho][decodeFbKey(ma)] = raw[kho][ma];
+  }
+  return out;
+}
+
 let state = { items: [], warehouses: [], stock: {}, inbound: [], outbound: [], counters: {}, lastUser: '', users: [], suppliers: [], recipients: [], dexuat: [] };
 
 let listenersAttached = false;
@@ -834,7 +869,11 @@ function attachDataListenersAndWaitFirstLoad(){
     let first = true;
     db.ref(k).on('value', snap=>{
       const val = snap.val();
-      state[k] = (val===null || val===undefined) ? defaultForKey(k) : val;
+      if(k==='stock'){
+        state[k] = decodeStockFromFirebase(val);
+      }else{
+        state[k] = (val===null || val===undefined) ? defaultForKey(k) : val;
+      }
       if(first){ first=false; resolve(); }
       else if(appStarted) refreshAll();
     }, err=>{ console.error('Lỗi đọc dữ liệu "'+k+'":', err); if(first){ first=false; resolve(); } });
@@ -856,8 +895,14 @@ function detachDataListeners(){
   DATA_KEYS.forEach(k=> db.ref(k).off());
   db.ref('userProfiles').off();
 }
-function saveKey(k){ db.ref(k).set(state[k]===undefined ? defaultForKey(k) : state[k]); }
-function saveAll(){ DATA_KEYS.forEach(k=>saveKey(k)); }
+function saveKey(k){
+  const val = state[k]===undefined ? defaultForKey(k) : state[k];
+  return db.ref(k).set(k==='stock' ? encodeStockForFirebase(val) : val).catch(err=>{
+    console.error('Lỗi ghi dữ liệu "'+k+'" lên Firebase:', err);
+    toast(`Lỗi khi lưu dữ liệu "${k}" lên Firebase: ${err&&err.message?err.message:'không rõ nguyên nhân'}`, 'error');
+  });
+}
+function saveAll(){ return Promise.all(DATA_KEYS.map(k=>saveKey(k))); }
 
 function genId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
@@ -3287,18 +3332,33 @@ document.getElementById('import-file').addEventListener('change', (e)=>{
   if(!file) return;
   const reader = new FileReader();
   reader.onload = (ev)=>{
+    let parsed;
     try{
-      const parsed = JSON.parse(ev.target.result);
-      const data = parsed.data || parsed;
-      if(!data.items || !data.warehouses){ throw new Error('invalid'); }
-      if(!confirm('Khôi phục sẽ GHI ĐÈ toàn bộ dữ liệu nghiệp vụ đang dùng CHUNG trên Firebase (áp dụng ngay cho tất cả người dùng đang kết nối). Không ảnh hưởng tài khoản đăng nhập. Tiếp tục?')) return;
-      DATA_KEYS.forEach(k=>{ state[k] = data[k]!==undefined ? data[k] : defaultForKey(k); });
-      saveAll();
-      toast('Đã khôi phục dữ liệu thành công', 'success');
-      refreshAll();
+      parsed = JSON.parse(ev.target.result);
     }catch(err){
-      toast('File không hợp lệ, không thể khôi phục', 'error');
+      toast('File không phải JSON hợp lệ (lỗi cú pháp): ' + err.message, 'error');
+      e.target.value = '';
+      return;
     }
+    const data = parsed && (parsed.data || parsed);
+    if(!data || typeof data !== 'object'){
+      toast('File JSON không đúng cấu trúc (thiếu object dữ liệu).', 'error');
+      e.target.value = '';
+      return;
+    }
+    if(!Array.isArray(data.items) || !Array.isArray(data.warehouses)){
+      toast(`File JSON thiếu trường bắt buộc: ${!Array.isArray(data.items)?'"items" ':''}${!Array.isArray(data.warehouses)?'"warehouses"':''}. Vui lòng kiểm tra lại đúng file backup đã xuất từ hệ thống.`, 'error');
+      e.target.value = '';
+      return;
+    }
+    if(!confirm('Khôi phục sẽ GHI ĐÈ toàn bộ dữ liệu nghiệp vụ đang dùng CHUNG trên Firebase (áp dụng ngay cho tất cả người dùng đang kết nối). Không ảnh hưởng tài khoản đăng nhập. Tiếp tục?')){
+      e.target.value = '';
+      return;
+    }
+    DATA_KEYS.forEach(k=>{ state[k] = data[k]!==undefined ? data[k] : defaultForKey(k); });
+    saveAll();
+    toast('Đã khôi phục dữ liệu thành công', 'success');
+    refreshAll();
     e.target.value = '';
   };
   reader.readAsText(file);
